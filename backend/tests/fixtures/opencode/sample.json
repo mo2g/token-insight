@@ -1,0 +1,17 @@
+{
+  "sessionId": "opencode-1",
+  "cwd": "/workspace/opencode",
+  "messages": [
+    {
+      "timestamp": "2026-03-20T10:04:00Z",
+      "role": "assistant",
+      "model": "gpt-5",
+      "usage": {
+        "input_tokens": 95,
+        "output_tokens": 35,
+        "cache_read_tokens": 5,
+        "reasoning_tokens": 6
+      }
+    }
+  ]
+}

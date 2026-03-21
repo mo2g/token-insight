@@ -1,0 +1,18 @@
+{
+  "id": "amp-1",
+  "workspace": "/workspace/amp",
+  "messages": [
+    {
+      "timestamp": "2026-03-20T10:06:00Z",
+      "role": "assistant",
+      "provider": "openai",
+      "model": "gpt-4o",
+      "tokens": {
+        "input": 150,
+        "output": 44,
+        "cached": 15,
+        "total": 209
+      }
+    }
+  ]
+}

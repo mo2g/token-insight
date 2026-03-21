@@ -1,0 +1,16 @@
+{
+  "sessionId": "kimi-1",
+  "workspace": "/workspace/kimi",
+  "messages": [
+    {
+      "timestamp": "2026-03-20T10:09:00Z",
+      "model": "kimi-k2",
+      "provider": "moonshot",
+      "usage": {
+        "input_tokens": 64,
+        "output_tokens": 18,
+        "total_tokens": 82
+      }
+    }
+  ]
+}

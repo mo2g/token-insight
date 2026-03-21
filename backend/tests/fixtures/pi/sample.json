@@ -1,0 +1,17 @@
+{
+  "threadId": "pi-1",
+  "cwd": "/workspace/pi",
+  "events": [
+    {
+      "timestamp": "2026-03-20T10:08:00Z",
+      "model": "grok-code-fast-1",
+      "provider": "xai",
+      "usage": {
+        "input_tokens": 70,
+        "output_tokens": 12,
+        "tool_tokens": 3,
+        "total_tokens": 85
+      }
+    }
+  ]
+}

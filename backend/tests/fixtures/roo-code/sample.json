@@ -1,0 +1,16 @@
+{
+  "session_id": "roo-1",
+  "cwd": "/workspace/roo",
+  "messages": [
+    {
+      "timestamp": "2026-03-20T10:11:00Z",
+      "model": "claude-sonnet-4-5",
+      "provider": "anthropic",
+      "usage": {
+        "input_tokens": 110,
+        "output_tokens": 28,
+        "total_tokens": 138
+      }
+    }
+  ]
+}

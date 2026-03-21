@@ -1,0 +1,17 @@
+{
+  "sessionId": "qwen-1",
+  "cwd": "/workspace/qwen",
+  "messages": [
+    {
+      "timestamp": "2026-03-20T10:10:00Z",
+      "model": "qwen-coder-plus",
+      "provider": "alibaba",
+      "usage": {
+        "input_tokens": 84,
+        "output_tokens": 20,
+        "cache_read_tokens": 8,
+        "total_tokens": 112
+      }
+    }
+  ]
+}

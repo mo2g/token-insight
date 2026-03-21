@@ -1,0 +1,18 @@
+{
+  "session_id": "openclaw-1",
+  "project": "/workspace/openclaw",
+  "events": [
+    {
+      "timestamp": "2026-03-20T10:05:00Z",
+      "type": "assistant",
+      "model": "claude-sonnet-4-5",
+      "provider": "anthropic",
+      "usage": {
+        "input_tokens": 120,
+        "output_tokens": 46,
+        "cache_read_tokens": 14,
+        "reasoning_tokens": 9
+      }
+    }
+  ]
+}

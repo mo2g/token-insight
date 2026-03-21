@@ -1,0 +1,17 @@
+{
+  "id": "mux-1",
+  "workspace": "/workspace/mux",
+  "events": [
+    {
+      "timestamp": "2026-03-20T10:13:00Z",
+      "model": "gpt-4.1",
+      "provider": "openai",
+      "usage": {
+        "input_tokens": 91,
+        "output_tokens": 19,
+        "cache_read_tokens": 7,
+        "total_tokens": 117
+      }
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "sessionId": "gemini-session-1",
+  "projectHash": "/workspace/gemini",
+  "messages": [
+    {
+      "id": "m1",
+      "timestamp": "2026-03-20T10:02:00Z",
+      "type": "gemini",
+      "model": "gemini-2.5-flash",
+      "tokens": {
+        "input": 88,
+        "output": 22,
+        "cached": 11,
+        "thoughts": 5,
+        "total": 126
+      }
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "sessionId": "synthetic-1",
+  "cwd": "/workspace/synthetic",
+  "messages": [
+    {
+      "timestamp": "2026-03-20T10:14:00Z",
+      "model": "hf:deepseek-r1",
+      "provider": "synthetic",
+      "usage": {
+        "input_tokens": 145,
+        "output_tokens": 40,
+        "reasoning_tokens": 22,
+        "total_tokens": 207
+      }
+    }
+  ]
+}

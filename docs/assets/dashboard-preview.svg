@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640" role="img" aria-label="Token Insight dashboard preview placeholder">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#efe9df"/>
+      <stop offset="100%" stop-color="#ddd7cd"/>
+    </linearGradient>
+    <linearGradient id="panel" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#101417"/>
+      <stop offset="100%" stop-color="#162026"/>
+    </linearGradient>
+    <linearGradient id="lineA" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#1ba784"/>
+      <stop offset="100%" stop-color="#7bd5bb"/>
+    </linearGradient>
+    <linearGradient id="lineB" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#ff8c42"/>
+      <stop offset="100%" stop-color="#ffbf95"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1280" height="640" fill="url(#bg)"/>
+  <circle cx="1130" cy="90" r="180" fill="#1ba784" fill-opacity="0.12"/>
+  <circle cx="120" cy="560" r="200" fill="#ff8c42" fill-opacity="0.12"/>
+
+  <text x="78" y="78" font-family="'Space Grotesk', sans-serif" font-size="54" font-weight="700" fill="#0d1317">Token Insight</text>
+  <text x="80" y="112" font-family="'IBM Plex Mono', monospace" font-size="18" fill="#31424a">Local-first token usage analytics preview</text>
+
+  <rect x="70" y="150" width="320" height="126" rx="24" fill="url(#panel)"/>
+  <rect x="406" y="150" width="320" height="126" rx="24" fill="url(#panel)"/>
+  <rect x="742" y="150" width="320" height="126" rx="24" fill="url(#panel)"/>
+
+  <text x="98" y="188" font-family="'IBM Plex Mono', monospace" font-size="16" fill="#9fb0a6">Total Tokens</text>
+  <text x="98" y="234" font-family="'Space Grotesk', sans-serif" font-size="44" font-weight="700" fill="#7bd5bb">12.4M</text>
+
+  <text x="434" y="188" font-family="'IBM Plex Mono', monospace" font-size="16" fill="#9fb0a6">Estimated Cost</text>
+  <text x="434" y="234" font-family="'Space Grotesk', sans-serif" font-size="44" font-weight="700" fill="#ffbf95">$31.8K</text>
+
+  <text x="770" y="188" font-family="'IBM Plex Mono', monospace" font-size="16" fill="#9fb0a6">Active Days</text>
+  <text x="770" y="234" font-family="'Space Grotesk', sans-serif" font-size="44" font-weight="700" fill="#f4efe7">284</text>
+
+  <rect x="70" y="296" width="1190" height="276" rx="24" fill="url(#panel)"/>
+  <text x="100" y="338" font-family="'IBM Plex Mono', monospace" font-size="16" fill="#9fb0a6">Trend Overview</text>
+
+  <polyline points="100,490 200,470 300,445 400,455 500,420 600,410 700,385 800,372 900,356 1000,330 1100,318 1210,300" fill="none" stroke="url(#lineA)" stroke-width="6" stroke-linecap="round"/>
+  <polyline points="100,520 200,505 300,500 400,492 500,480 600,470 700,452 800,446 900,430 1000,420 1100,402 1210,392" fill="none" stroke="url(#lineB)" stroke-width="6" stroke-linecap="round"/>
+</svg>

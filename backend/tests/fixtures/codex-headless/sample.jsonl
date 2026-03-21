@@ -1,0 +1,3 @@
+{"timestamp":"2026-03-20T10:10:00Z","type":"session_meta","payload":{"id":"headless-session-1","cwd":"/workspace/ci","model_provider":"openai"}}
+{"timestamp":"2026-03-20T10:10:05Z","type":"turn_context","payload":{"cwd":"/workspace/ci","model":"gpt-5.4"}}
+{"timestamp":"2026-03-20T10:11:00Z","type":"event_msg","payload":{"type":"token_count","info":{"last_token_usage":{"input_tokens":200,"cached_input_tokens":20,"output_tokens":44,"reasoning_output_tokens":8,"total_tokens":244}}}}
