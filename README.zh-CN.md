@@ -75,3 +75,15 @@ bun --cwd frontend build
 - 持续增加来源适配器与 parser fixture。
 - 补充可发布的社媒视觉素材和演示 GIF。
 - 在 API 与 UX 稳定后补齐 CI 与发布自动化。
+
+
+## 其他选择
+
+- [tokendashboard](https://github.com/pdajoy/tokendashboard)
+
+## 致谢
+
+- [tokscale](https://github.com/junhoyeo/tokscale)
+- [ccusage](https://github.com/ryoppippi/ccusage)
+- [LiteLLM](https://github.com/BerriAI/litellm)
+- [OpenRouter](https://openrouter.ai)

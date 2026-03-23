@@ -76,3 +76,15 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for setup, verification, and contributi
 - Add more source adapters and richer parser fixtures.
 - Add publish-ready social media visuals and demo GIFs.
 - Add CI and release automation once API and UX stabilize.
+
+
+## Alternatives
+
+- [tokendashboard](https://github.com/pdajoy/tokendashboard)
+
+## Credits
+
+- [tokscale](https://github.com/junhoyeo/tokscale)
+- [ccusage](https://github.com/ryoppippi/ccusage)
+- [LiteLLM](https://github.com/BerriAI/litellm)
+- [OpenRouter](https://openrouter.ai)
