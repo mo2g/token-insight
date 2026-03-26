@@ -11,7 +11,8 @@ It scans local artifacts, normalizes usage events, stores them in SQLite, and se
 
 - **Local-first by default**: no cloud login, no mandatory data upload.
 - **Multi-source ingestion**: aggregates Codex, Claude, Gemini, Cursor, and more from local artifacts.
-- **Actionable dashboard**: trend charts, model/source breakdowns, contributions heatmap, and source health status.
+- **Actionable dashboard**: trend charts, model/source breakdowns, contributions heatmap, and grouped source health status.
+- **Dual-axis theme system**: switch both dashboard layouts (`console` / `dock` / `radar`) and color skins (`sand` / `midnight` / `frost` / `signal`).
 - **Operational scripts included**: start dev/prod, refresh scans, export datasets, and generate PNG social cards.
 
 ## Repository Layout
@@ -59,7 +60,16 @@ Backend defaults to `http://127.0.0.1:8787`.
 
 # Generate social image
 ./scripts/share-image.sh --preset summary --output /tmp/token-share.png
+
+# Generate README layout screenshots
+./scripts/capture-doc-screenshots.sh
 ```
+
+## Layout Themes (Tech UI)
+
+| Console | Dock | Radar |
+| --- | --- | --- |
+| ![Console layout](./docs/assets/dashboard-layout-console.png) | ![Dock layout](./docs/assets/dashboard-layout-dock.png) | ![Radar layout](./docs/assets/dashboard-layout-radar.png) |
 
 ## Privacy and Data Behavior
 

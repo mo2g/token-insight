@@ -4,9 +4,16 @@ type PanelProps = PropsWithChildren<{
   title: string;
   subtitle?: string;
   actions?: React.ReactNode;
+  bodyClassName?: string;
 }>;
 
-export default function Panel({ title, subtitle, actions, children }: PanelProps) {
+export default function Panel({
+  title,
+  subtitle,
+  actions,
+  bodyClassName,
+  children,
+}: PanelProps) {
   return (
     <section className="panel">
       <div className="panel-header">
@@ -16,7 +23,7 @@ export default function Panel({ title, subtitle, actions, children }: PanelProps
         </div>
         {actions}
       </div>
-      {children}
+      <div className={bodyClassName ? `panel-body ${bodyClassName}` : "panel-body"}>{children}</div>
     </section>
   );
 }

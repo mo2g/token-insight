@@ -1,14 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import GridLayout, { type Layout, type LayoutItem } from "react-grid-layout";
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
 import BreakdownTable from "../components/BreakdownTable";
 import ContributionHeatmap from "../components/ContributionHeatmap";
+import CoreMetricsPanel from "../components/CoreMetricsPanel";
 import FilterBar from "../components/FilterBar";
 import FilterDrawer from "../components/FilterDrawer";
-import MetricCard from "../components/MetricCard";
 import Panel from "../components/Panel";
+import SourceHealthPanel from "../components/SourceHealthPanel";
 import {
+  type BreakdownRow,
   type TimelineBucket,
+  type UsageFilter,
   fetchContributions,
   fetchFilterOptions,
   fetchModelsBreakdown,
@@ -19,32 +23,105 @@ import {
   filterToQuery,
   refreshData,
 } from "../lib/api";
+import {
+  DASHBOARD_CARD_ORDER,
+  clearDashboardLayout,
+  defaultDashboardLayout,
+  isCustomDashboardLayout,
+  isFixedDashboardCard,
+  loadDashboardLayout,
+  normalizeDashboardLayout,
+  saveDashboardLayout,
+  type DashboardCardId,
+} from "../lib/dashboardLayout";
 import { ReactECharts, echarts } from "../lib/echarts";
 import {
   formatCompactNumber,
   formatCompactUsd,
   formatDate,
-  formatNumber,
   formatUsd,
 } from "../lib/format";
 import { defaultFilter, mergeFilter, parseFilter } from "../lib/filters";
+import {
+  loadHeatmapCycleSettings,
+  normalizeHeatmapCycleSettings,
+  saveHeatmapCycleSettings,
+  type HeatmapCycleSettings,
+} from "../lib/heatmapCycles";
 import { useLocale } from "../lib/i18n";
+import { chartPalette, useTheme } from "../lib/theme";
 import { useRefreshStream } from "../lib/useRefreshStream";
 
-export default function DashboardPage() {
+type TrendMetric = "tokens" | "cost" | "dual";
+
+type DashboardPageProps = {
+  filterPinned: boolean;
+  mastheadCollapsed: boolean;
+  inlineDockTools: boolean;
+  onToggleFilterPinned: () => void;
+  onScrollTop: () => void;
+};
+
+export default function DashboardPage({
+  filterPinned,
+  mastheadCollapsed,
+  inlineDockTools,
+  onToggleFilterPinned,
+  onScrollTop,
+}: DashboardPageProps) {
   const { locale, t } = useLocale();
+  const { theme, layoutTheme } = useTheme();
   const [searchParams, setSearchParams] = useSearchParams();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [timelineBucket, setTimelineBucket] = useState<TimelineBucket>("daily");
   const [timelineMetric, setTimelineMetric] = useState<TrendMetric>("tokens");
+  const [cycleSettings, setCycleSettings] = useState<HeatmapCycleSettings>(() =>
+    loadHeatmapCycleSettings(),
+  );
+  const [cardLayout, setCardLayout] = useState<LayoutItem[]>(() =>
+    loadDashboardLayout(layoutTheme) ?? defaultDashboardLayout(layoutTheme),
+  );
+  const dashboardWrapRef = useRef<HTMLDivElement | null>(null);
   const chartWrapRef = useRef<HTMLDivElement | null>(null);
+  const filterShellRef = useRef<HTMLDivElement | null>(null);
+  const [dashboardWidth, setDashboardWidth] = useState(1320);
   const [chartWidth, setChartWidth] = useState(860);
+  const [filterBounds, setFilterBounds] = useState({
+    left: 0,
+    width: 0,
+    height: 0,
+  });
+  const canEditLayout = dashboardWidth >= 1024;
+
   const filter = useMemo(
     () => mergeFilter(defaultFilter, parseFilter(searchParams)),
     [searchParams],
   );
+  const palette = chartPalette(theme);
+  const filterPinnedActive = filterPinned && mastheadCollapsed;
 
   useRefreshStream();
+
+  useEffect(() => {
+    setCardLayout(loadDashboardLayout(layoutTheme) ?? defaultDashboardLayout(layoutTheme));
+  }, [layoutTheme]);
+
+  useEffect(() => {
+    const element = dashboardWrapRef.current;
+    if (!element || typeof ResizeObserver === "undefined") {
+      return;
+    }
+
+    setDashboardWidth(element.clientWidth || 1320);
+    const observer = new ResizeObserver((entries) => {
+      const next = entries.at(0)?.contentRect.width;
+      if (next && next > 0) {
+        setDashboardWidth(next);
+      }
+    });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     const element = chartWrapRef.current;
@@ -61,6 +138,41 @@ export default function DashboardPage() {
     return () => observer.disconnect();
   }, []);
 
+  useEffect(() => {
+    const element = filterShellRef.current;
+    if (!element) return;
+
+    const update = () => {
+      const rect = element.getBoundingClientRect();
+      setFilterBounds({
+        left: rect.left,
+        width: rect.width,
+        height: element.offsetHeight,
+      });
+    };
+
+    update();
+    const resizeObserver =
+      typeof ResizeObserver === "undefined"
+        ? null
+        : new ResizeObserver(() => update());
+    resizeObserver?.observe(element);
+    window.addEventListener("resize", update);
+    return () => {
+      resizeObserver?.disconnect();
+      window.removeEventListener("resize", update);
+    };
+  }, []);
+
+  const normalizedLayout = useMemo(
+    () => normalizeDashboardLayout(layoutTheme, cardLayout),
+    [cardLayout, layoutTheme],
+  );
+  const layoutCustomized = useMemo(
+    () => isCustomDashboardLayout(layoutTheme, normalizedLayout),
+    [layoutTheme, normalizedLayout],
+  );
+
   const overviewQuery = useQuery({
     queryKey: ["overview", filter],
     queryFn: () => fetchOverview(filter),
@@ -68,6 +180,14 @@ export default function DashboardPage() {
   const modelQuery = useQuery({
     queryKey: ["models", filter],
     queryFn: () => fetchModelsBreakdown(filter),
+  });
+  const modelFilterSeed = useMemo(
+    () => ({ ...filter, models: [] }),
+    [filter],
+  );
+  const modelFilterOptionsQuery = useQuery({
+    queryKey: ["models-filter-options", modelFilterSeed],
+    queryFn: () => fetchModelsBreakdown(modelFilterSeed),
   });
   const sourceQuery = useQuery({
     queryKey: ["sources-breakdown", filter],
@@ -95,6 +215,11 @@ export default function DashboardPage() {
   const modelRows = modelQuery.data ?? [];
   const sourceRows = sourceQuery.data ?? [];
   const sourceStatus = sourceStatusQuery.data ?? [];
+  const tokenModelOptions = useMemo(
+    () => buildTokenModelOptions(modelFilterOptionsQuery.data ?? [], filter.models),
+    [filter.models, modelFilterOptionsQuery.data],
+  );
+  const activeFilterCount = useMemo(() => countActiveFilters(filter), [filter]);
 
   const timelineLabels = timeline.map((item) =>
     formatBucketLabel(item.bucket_start, timelineBucket, locale),
@@ -139,7 +264,7 @@ export default function DashboardPage() {
       type: "category",
       data: timelineLabels,
       axisLabel: {
-        color: "#738180",
+        color: palette.axis,
         formatter: (value: string, index: number) =>
           visibleXAxisIndexes.has(index) ? value : "",
       },
@@ -151,17 +276,17 @@ export default function DashboardPage() {
               type: "value",
               name: t("trend.series.tokens"),
               axisLabel: {
-                color: "#738180",
+                color: palette.axis,
                 margin: 12,
                 formatter: (value: number) => formatCompactNumber(value),
               },
-              splitLine: { lineStyle: { color: "rgba(115,129,128,0.15)" } },
+              splitLine: { lineStyle: { color: palette.splitLine } },
             },
             {
               type: "value",
               name: t("trend.series.cost"),
               axisLabel: {
-                color: "#c58d6d",
+                color: palette.axisAccent,
                 margin: 12,
                 formatter: (value: number) => formatCompactUsd(value),
               },
@@ -171,14 +296,14 @@ export default function DashboardPage() {
         : {
             type: "value",
             axisLabel: {
-              color: "#738180",
+              color: palette.axis,
               margin: 12,
               formatter: (value: number) =>
                 timelineMetric === "cost"
                   ? formatCompactUsd(value)
                   : formatCompactNumber(value),
             },
-            splitLine: { lineStyle: { color: "rgba(115,129,128,0.15)" } },
+            splitLine: { lineStyle: { color: palette.splitLine } },
           },
     series: [
       ...(timelineMetric === "cost"
@@ -190,10 +315,10 @@ export default function DashboardPage() {
               smooth: true,
               data: timeline.map((item) => item.total_tokens),
               yAxisIndex: timelineMetric === "dual" ? 0 : undefined,
-              lineStyle: { color: "#1ba784", width: 3 },
-              itemStyle: { color: "#1ba784" },
+              lineStyle: { color: palette.tokenLine, width: 3 },
+              itemStyle: { color: palette.tokenLine },
               areaStyle: {
-                color: "rgba(27,167,132,0.12)",
+                color: palette.tokenArea,
               },
             },
           ]),
@@ -206,9 +331,9 @@ export default function DashboardPage() {
               smooth: true,
               data: timeline.map((item) => item.total_cost_usd),
               yAxisIndex: timelineMetric === "dual" ? 1 : undefined,
-              lineStyle: { color: "#ff8c42", width: 3 },
-              itemStyle: { color: "#ff8c42" },
-              areaStyle: timelineMetric === "cost" ? { color: "rgba(255,140,66,0.12)" } : undefined,
+              lineStyle: { color: palette.costLine, width: 3 },
+              itemStyle: { color: palette.costLine },
+              areaStyle: timelineMetric === "cost" ? { color: palette.costArea } : undefined,
             },
           ]),
     ],
@@ -220,7 +345,7 @@ export default function DashboardPage() {
       {
         type: "pie",
         radius: ["45%", "72%"],
-        label: { color: "#f4efe7" },
+        label: { color: palette.pieLabel },
         data: sourceRows.slice(0, 8).map((row) => ({
           name: row.label,
           value: row.total_tokens,
@@ -241,19 +366,161 @@ export default function DashboardPage() {
     });
   };
 
+  const onCycleSettingsChange = (next: HeatmapCycleSettings) => {
+    const normalized = normalizeHeatmapCycleSettings(next);
+    setCycleSettings(normalized);
+    saveHeatmapCycleSettings(normalized);
+  };
+
+  const onLayoutChange = (nextLayout: Layout) => {
+    const normalized = normalizeDashboardLayout(layoutTheme, nextLayout);
+    setCardLayout(normalized);
+    saveDashboardLayout(layoutTheme, normalized);
+  };
+
+  const onLayoutReset = () => {
+    clearDashboardLayout(layoutTheme);
+    setCardLayout(defaultDashboardLayout(layoutTheme));
+  };
+
   const exportBase = `/api/export/events.json?${filterToQuery(filter).toString()}`;
   const exportCsv = `/api/export/events.csv?${filterToQuery(filter).toString()}`;
 
-  return (
-    <div className="dashboard-grid">
-      <FilterBar
-        filter={filter}
-        onChange={onFilterChange}
-        onClear={onFilterClear}
-        onOpenAdvanced={() => setDrawerOpen(true)}
-        onRefresh={() => void refreshData()}
-      />
+  const renderCard = (cardId: DashboardCardId) => {
+    switch (cardId) {
+      case "trend":
+        return (
+          <Panel
+            title={t("panel.trend.title")}
+            subtitle={t("panel.trend.subtitle", {
+              bucket: timelineLabel(timelineBucket, t),
+              metric: timelineMetricLabel(timelineMetric, t),
+            })}
+            actions={
+              <div className="panel-actions">
+                <div
+                  className="button-group timeline-switch"
+                  role="group"
+                  aria-label={t("trend.aria.bucket")}
+                >
+                  <button
+                    className={timelineBucket === "daily" ? "timeline-button active" : "timeline-button"}
+                    aria-pressed={timelineBucket === "daily"}
+                    onClick={() => setTimelineBucket("daily")}
+                  >
+                    {t("trend.bucket.dailyShort")}
+                  </button>
+                  <button
+                    className={timelineBucket === "hourly" ? "timeline-button active" : "timeline-button"}
+                    aria-pressed={timelineBucket === "hourly"}
+                    onClick={() => setTimelineBucket("hourly")}
+                  >
+                    {t("trend.bucket.hourlyShort")}
+                  </button>
+                  <button
+                    className={timelineBucket === "minutely" ? "timeline-button active" : "timeline-button"}
+                    aria-pressed={timelineBucket === "minutely"}
+                    onClick={() => setTimelineBucket("minutely")}
+                  >
+                    {t("trend.bucket.minutelyShort")}
+                  </button>
+                </div>
+                <div
+                  className="button-group timeline-switch"
+                  role="group"
+                  aria-label={t("trend.aria.metric")}
+                >
+                  <button
+                    className={timelineMetric === "tokens" ? "timeline-button active" : "timeline-button"}
+                    aria-pressed={timelineMetric === "tokens"}
+                    onClick={() => setTimelineMetric("tokens")}
+                  >
+                    {t("trend.metric.tokens")}
+                  </button>
+                  <button
+                    className={timelineMetric === "cost" ? "timeline-button active" : "timeline-button"}
+                    aria-pressed={timelineMetric === "cost"}
+                    onClick={() => setTimelineMetric("cost")}
+                  >
+                    {t("trend.metric.cost")}
+                  </button>
+                  <button
+                    className={timelineMetric === "dual" ? "timeline-button active" : "timeline-button"}
+                    aria-pressed={timelineMetric === "dual"}
+                    onClick={() => setTimelineMetric("dual")}
+                  >
+                    {t("trend.metric.dualShort")}
+                  </button>
+                </div>
+                <a className="button ghost panel-ghost" href={exportBase}>
+                  {t("trend.exportJson")}
+                </a>
+                <a className="button ghost panel-ghost" href={exportCsv}>
+                  {t("trend.exportCsv")}
+                </a>
+              </div>
+            }
+          >
+            <div ref={chartWrapRef}>
+              <ReactECharts
+                echarts={echarts}
+                option={lineOption}
+                style={{ height: 320 }}
+                notMerge
+              />
+            </div>
+          </Panel>
+        );
+      case "metrics":
+        return (
+          <Panel title={t("panel.metrics.title")} subtitle={t("panel.metrics.subtitle")}>
+            <CoreMetricsPanel stats={overview} />
+          </Panel>
+        );
+      case "heatmap":
+        return (
+          <Panel
+            title={t("panel.heatmap.title")}
+            subtitle={t("panel.heatmap.subtitle")}
+            bodyClassName="heatmap-panel-body"
+          >
+            <ContributionHeatmap
+              cells={contributionQuery.data ?? []}
+              settings={cycleSettings}
+              onSettingsChange={onCycleSettingsChange}
+              variant={layoutTheme === "dock" ? "micro" : "compact"}
+            />
+          </Panel>
+        );
+      case "health":
+        return (
+          <Panel title={t("panel.health.title")} subtitle={t("panel.health.subtitle")}>
+            <SourceHealthPanel items={sourceStatus} variant="summary" />
+          </Panel>
+        );
+      case "models":
+        return (
+          <Panel title={t("panel.models.title")} subtitle={t("panel.models.subtitle")}>
+            <BreakdownTable rows={modelRows.slice(0, 10)} variant="auto" mode="ranking" />
+          </Panel>
+        );
+      case "rankSources":
+        return (
+          <Panel title={t("panel.rankSources.title")} subtitle={t("panel.rankSources.subtitle")}>
+            <BreakdownTable rows={sourceRows.slice(0, 10)} variant="auto" />
+          </Panel>
+        );
+      case "sources":
+        return (
+          <Panel title={t("panel.sources.title")} subtitle={t("panel.sources.subtitle")}>
+            <ReactECharts echarts={echarts} option={sourcePie} style={{ height: 300 }} />
+          </Panel>
+        );
+    }
+  };
 
+  return (
+    <div className={`dashboard-shell layout-${layoutTheme}`}>
       <FilterDrawer
         open={drawerOpen}
         filter={filter}
@@ -262,145 +529,130 @@ export default function DashboardPage() {
         onChange={onFilterChange}
       />
 
-      <section className="metrics-grid">
-        <MetricCard
-          label={t("metric.totalTokens")}
-          value={formatNumber(overview?.total_tokens ?? 0)}
-          detail={t("metric.eventsDetail", { count: overview?.event_count ?? 0 })}
-        />
-        <MetricCard
-          label={t("metric.estimatedCost")}
-          value={formatUsd(overview?.total_cost_usd ?? 0, locale)}
-          detail={t("metric.topModelDetail", {
-            model: overview?.top_model ?? t("common.na"),
-          })}
-          tone="amber"
-        />
-        <MetricCard
-          label={t("metric.activeDays")}
-          value={String(overview?.active_days ?? 0)}
-          detail={t("metric.streakDetail", { days: overview?.streak_days ?? 0 })}
-        />
-        <MetricCard
-          label={t("metric.lastRefresh")}
-          value={formatDate(overview?.last_refresh_at, locale, t("common.na"))}
-          detail={t("metric.lastEventDetail", {
-            value: formatDate(overview?.last_event_at, locale, t("common.na")),
-          })}
-        />
-      </section>
-
-      <Panel
-        title={t("panel.trend.title")}
-        subtitle={t("panel.trend.subtitle", {
-          bucket: timelineLabel(timelineBucket, t),
-          metric: timelineMetricLabel(timelineMetric, t),
-        })}
-        actions={
-          <div className="panel-actions">
-            <div className="button-group timeline-switch" role="group" aria-label={t("trend.aria.bucket")}>
-              <button
-                className={timelineBucket === "daily" ? "timeline-button active" : "timeline-button"}
-                aria-pressed={timelineBucket === "daily"}
-                onClick={() => setTimelineBucket("daily")}
-              >
-                {t("trend.bucket.dailyShort")}
-              </button>
-              <button
-                className={timelineBucket === "hourly" ? "timeline-button active" : "timeline-button"}
-                aria-pressed={timelineBucket === "hourly"}
-                onClick={() => setTimelineBucket("hourly")}
-              >
-                {t("trend.bucket.hourlyShort")}
-              </button>
-              <button
-                className={timelineBucket === "minutely" ? "timeline-button active" : "timeline-button"}
-                aria-pressed={timelineBucket === "minutely"}
-                onClick={() => setTimelineBucket("minutely")}
-              >
-                {t("trend.bucket.minutelyShort")}
-              </button>
-            </div>
-            <div className="button-group timeline-switch" role="group" aria-label={t("trend.aria.metric")}>
-              <button
-                className={timelineMetric === "tokens" ? "timeline-button active" : "timeline-button"}
-                aria-pressed={timelineMetric === "tokens"}
-                onClick={() => setTimelineMetric("tokens")}
-              >
-                {t("trend.metric.tokens")}
-              </button>
-              <button
-                className={timelineMetric === "cost" ? "timeline-button active" : "timeline-button"}
-                aria-pressed={timelineMetric === "cost"}
-                onClick={() => setTimelineMetric("cost")}
-              >
-                {t("trend.metric.cost")}
-              </button>
-              <button
-                className={timelineMetric === "dual" ? "timeline-button active" : "timeline-button"}
-                aria-pressed={timelineMetric === "dual"}
-                onClick={() => setTimelineMetric("dual")}
-              >
-                {t("trend.metric.dualShort")}
-              </button>
-            </div>
-            <a className="button ghost panel-ghost" href={exportBase}>
-              {t("trend.exportJson")}
-            </a>
-            <a className="button ghost panel-ghost" href={exportCsv}>
-              {t("trend.exportCsv")}
-            </a>
-          </div>
-        }
+      <div
+        ref={filterShellRef}
+        className={filterPinnedActive ? "dashboard-filter-shell pinned" : "dashboard-filter-shell"}
+        style={filterPinnedActive ? { minHeight: `${filterBounds.height}px` } : undefined}
       >
-        <div ref={chartWrapRef}>
-          <ReactECharts
-            echarts={echarts}
-            option={lineOption}
-            style={{ height: 280 }}
-            notMerge
+        <div
+          className="dashboard-filter-frame"
+          style={
+            filterPinnedActive
+              ? {
+                  left: `${filterBounds.left}px`,
+                  width: `${filterBounds.width}px`,
+                }
+              : undefined
+          }
+        >
+          <FilterBar
+            filter={filter}
+            tokenModelOptions={tokenModelOptions}
+            pinned={filterPinned}
+            showInlineTools={inlineDockTools}
+            activeFilterCount={activeFilterCount}
+            onTogglePinned={onToggleFilterPinned}
+            onScrollTop={onScrollTop}
+            onChange={onFilterChange}
+            onClear={onFilterClear}
+            onOpenAdvanced={() => setDrawerOpen(true)}
+            onRefresh={() => void refreshData()}
+            onResetLayout={onLayoutReset}
+            layoutCustomized={layoutCustomized}
           />
         </div>
-      </Panel>
+      </div>
 
-      <Panel title={t("panel.sources.title")} subtitle={t("panel.sources.subtitle")}>
-        <ReactECharts echarts={echarts} option={sourcePie} style={{ height: 280 }} />
-      </Panel>
-
-      <Panel title={t("panel.heatmap.title")} subtitle={t("panel.heatmap.subtitle")}>
-        <ContributionHeatmap cells={contributionQuery.data ?? []} />
-      </Panel>
-
-      <Panel title={t("panel.models.title")} subtitle={t("panel.models.subtitle")}>
-        <BreakdownTable rows={modelRows.slice(0, 10)} />
-      </Panel>
-
-      <Panel title={t("panel.rankSources.title")} subtitle={t("panel.rankSources.subtitle")}>
-        <BreakdownTable rows={sourceRows.slice(0, 10)} />
-      </Panel>
-
-      <Panel title={t("panel.health.title")} subtitle={t("panel.health.subtitle")}>
-        <div className="status-list">
-          {sourceStatus.map((item) => (
-            <article key={item.source} className="status-card">
-              <header>
-                <strong>{item.label}</strong>
-                <span>{item.mode}</span>
-              </header>
-              <p>{t("health.artifacts", { count: item.discovered_artifacts })}</p>
-              <p>{t("health.events", { count: item.imported_events })}</p>
-              <p>
-                {t("health.lastScan", {
-                  value: formatDate(item.last_scan_completed_at, locale, t("common.na")),
-                })}
-              </p>
-              {item.last_error ? <p className="status-error">{item.last_error}</p> : null}
-            </article>
-          ))}
-        </div>
-      </Panel>
+      <div ref={dashboardWrapRef} className="dashboard-grid-wrap">
+        {canEditLayout ? (
+          <GridLayout
+            className="dashboard-grid"
+            layout={normalizedLayout}
+            width={dashboardWidth}
+            gridConfig={{
+              cols: 12,
+              rowHeight: 36,
+              margin: [12, 12],
+              containerPadding: [0, 0],
+              maxRows: Number.POSITIVE_INFINITY,
+            }}
+            dragConfig={{ handle: ".dashboard-drag-handle" }}
+            resizeConfig={{ handles: ["se"] }}
+            onLayoutChange={onLayoutChange}
+          >
+            {DASHBOARD_CARD_ORDER.map((cardId) => (
+              <div
+                key={cardId}
+                className={`dashboard-item ${isFixedDashboardCard(cardId) ? "fixed" : "stretch"}`}
+              >
+                <span className="dashboard-drag-handle" title={t("dashboard.dragHandle")} aria-hidden="true">
+                  ⠿
+                </span>
+                <div className="dashboard-item-body">{renderCard(cardId)}</div>
+              </div>
+            ))}
+          </GridLayout>
+        ) : (
+          <div className="dashboard-stack">
+            {DASHBOARD_CARD_ORDER.map((cardId) => (
+              <section
+                key={cardId}
+                className={`dashboard-stack-item ${isFixedDashboardCard(cardId) ? "fixed" : "stretch"}`}
+              >
+                <div className="dashboard-item-body">{renderCard(cardId)}</div>
+              </section>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
+}
+
+function buildTokenModelOptions(rows: BreakdownRow[], selectedModels: string[]) {
+  const totals = new Map<string, number>();
+  for (const row of rows) {
+    const model = (row.model ?? row.label).trim();
+    if (!model) continue;
+    totals.set(model, (totals.get(model) ?? 0) + row.total_tokens);
+  }
+
+  for (const selectedModel of selectedModels) {
+    if (!totals.has(selectedModel)) {
+      totals.set(selectedModel, 0);
+    }
+  }
+
+  return [...totals.entries()]
+    .map(([value, tokens]) => ({
+      value,
+      label: value,
+      tokens,
+    }))
+    .sort((left, right) => {
+      if (right.tokens !== left.tokens) return right.tokens - left.tokens;
+      return left.label.localeCompare(right.label, undefined, { sensitivity: "base" });
+    });
+}
+
+function countActiveFilters(filter: UsageFilter) {
+  let count = 0;
+  count += filter.sources.length;
+  count += filter.providers.length;
+  count += filter.models.length;
+  count += filter.modelFamilies.length;
+  count += filter.projects.length;
+  count += filter.search ? 1 : 0;
+  count += filter.since ? 1 : 0;
+  count += filter.until ? 1 : 0;
+  count += filter.mode ? 1 : 0;
+  count += typeof filter.minTokens === "number" ? 1 : 0;
+  count += typeof filter.maxTokens === "number" ? 1 : 0;
+  count += typeof filter.minCost === "number" ? 1 : 0;
+  count += typeof filter.maxCost === "number" ? 1 : 0;
+  count += filter.excludeArchived ? 1 : 0;
+  count += filter.preset && filter.preset !== defaultFilter.preset ? 1 : 0;
+  return count;
 }
 
 function formatBucketLabel(value: string, bucket: TimelineBucket, locale: string) {
@@ -438,8 +690,6 @@ function timelineLabel(
   if (bucket === "minutely") return t("trend.bucket.minutely");
   return t("trend.bucket.daily");
 }
-
-type TrendMetric = "tokens" | "cost" | "dual";
 
 function timelineMetricLabel(
   metric: TrendMetric,

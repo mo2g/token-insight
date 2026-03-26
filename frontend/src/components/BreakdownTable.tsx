@@ -4,42 +4,51 @@ import {
   getCoreRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { BreakdownRow } from "../lib/api";
 import { formatNumber, formatUsd } from "../lib/format";
 import { useLocale } from "../lib/i18n";
 
 type BreakdownTableProps = {
   rows: BreakdownRow[];
+  variant?: "auto" | "mini";
+  mode?: "default" | "ranking";
 };
 
 const helper = createColumnHelper<BreakdownRow>();
+const FULL_TABLE_MIN_WIDTH = 720;
+type TableDensity = "full" | "compact" | "mini";
 
-export default function BreakdownTable({ rows }: BreakdownTableProps) {
+export default function BreakdownTable({
+  rows,
+  variant = "auto",
+  mode = "default",
+}: BreakdownTableProps) {
   const { locale, t } = useLocale();
+  const wrapRef = useRef<HTMLDivElement | null>(null);
+  const [width, setWidth] = useState(960);
+  const density = variant === "mini" ? "mini" : densityFromWidth(width, mode);
+
+  useEffect(() => {
+    const element = wrapRef.current;
+    if (!element || typeof ResizeObserver === "undefined") {
+      return;
+    }
+
+    setWidth(element.clientWidth);
+    const observer = new ResizeObserver((entries) => {
+      const next = entries.at(0)?.contentRect.width;
+      if (next && next > 0) {
+        setWidth(next);
+      }
+    });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+
   const columns = useMemo(
-    () => [
-      helper.accessor("label", {
-        header: t("table.dimension"),
-        cell: (info) => <strong>{info.getValue()}</strong>,
-      }),
-      helper.accessor("event_count", {
-        header: t("table.events"),
-      }),
-      helper.accessor("total_tokens", {
-        header: t("table.tokens"),
-        cell: (info) => formatNumber(info.getValue()),
-      }),
-      helper.accessor("total_cost_usd", {
-        header: t("table.cost"),
-        cell: (info) => formatUsd(info.getValue(), locale),
-      }),
-      helper.accessor("reasoning_tokens", {
-        header: t("table.reasoning"),
-        cell: (info) => formatNumber(info.getValue()),
-      }),
-    ],
-    [locale, t],
+    () => buildColumns(density, locale, t, mode),
+    [density, locale, mode, t],
   );
 
   const table = useReactTable({
@@ -49,13 +58,16 @@ export default function BreakdownTable({ rows }: BreakdownTableProps) {
   });
 
   return (
-    <div className="table-wrap">
-      <table>
+    <div
+      ref={wrapRef}
+      className={mode === "ranking" ? `table-wrap no-scroll density-${density}` : `table-wrap density-${density}`}
+    >
+      <table className={`breakdown-table density-${density}`}>
         <thead>
           {table.getHeaderGroups().map((group) => (
             <tr key={group.id}>
               {group.headers.map((header) => (
-                <th key={header.id}>
+                <th key={header.id} className={headerClass(header.id)}>
                   {flexRender(header.column.columnDef.header, header.getContext())}
                 </th>
               ))}
@@ -66,7 +78,7 @@ export default function BreakdownTable({ rows }: BreakdownTableProps) {
           {table.getRowModel().rows.map((row) => (
             <tr key={row.id}>
               {row.getVisibleCells().map((cell) => (
-                <td key={cell.id}>
+                <td key={cell.id} className={cellClass(cell.column.id)}>
                   {flexRender(cell.column.columnDef.cell, cell.getContext())}
                 </td>
               ))}
@@ -76,4 +88,85 @@ export default function BreakdownTable({ rows }: BreakdownTableProps) {
       </table>
     </div>
   );
+}
+
+function densityFromWidth(width: number, mode: BreakdownTableProps["mode"]): TableDensity {
+  if (mode === "ranking") {
+    if (width < 420) return "mini";
+    if (width < 640) return "compact";
+    return "full";
+  }
+  if (width < FULL_TABLE_MIN_WIDTH) return "compact";
+  return "full";
+}
+
+function buildColumns(
+  density: TableDensity,
+  locale: ReturnType<typeof useLocale>["locale"],
+  t: ReturnType<typeof useLocale>["t"],
+  mode: BreakdownTableProps["mode"],
+) {
+  if (mode === "ranking") {
+    return [
+      helper.accessor("label", {
+        header: t("table.dimension"),
+        cell: (info) => (
+          <span className="table-label-stack">
+            <strong>{info.getValue()}</strong>
+            <em>{t("table.events")} {formatNumber(info.row.original.event_count)}</em>
+          </span>
+        ),
+      }),
+      helper.accessor("total_tokens", {
+        header: t("table.tokens"),
+        cell: (info) => formatNumber(info.getValue()),
+      }),
+      helper.accessor("total_cost_usd", {
+        header: t("table.cost"),
+        cell: (info) => formatUsd(info.getValue(), locale),
+      }),
+    ];
+  }
+
+  const compactColumns = [
+    helper.accessor("label", {
+      header: t("table.dimension"),
+      cell: (info) => <strong>{info.getValue()}</strong>,
+    }),
+    helper.accessor("event_count", {
+      header: t("table.events"),
+      cell: (info) => formatNumber(info.getValue()),
+    }),
+    helper.accessor("total_tokens", {
+      header: t("table.tokens"),
+      cell: (info) => formatNumber(info.getValue()),
+    }),
+    helper.accessor("total_cost_usd", {
+      header: t("table.cost"),
+      cell: (info) => formatUsd(info.getValue(), locale),
+    }),
+  ];
+
+  if (density === "mini") {
+    return compactColumns.slice(0, 3);
+  }
+
+  if (density === "full") {
+    return [...compactColumns, helper.accessor("reasoning_tokens", {
+      header: t("table.reasoning"),
+      cell: (info) => formatNumber(info.getValue()),
+    })];
+  }
+
+  return compactColumns;
+}
+
+function headerClass(columnId: string) {
+  if (columnId === "label") return "table-header-label";
+  return "table-header-number";
+}
+
+function cellClass(columnId: string) {
+  if (columnId === "label") return "table-cell-label";
+  return "table-cell-number";
 }
