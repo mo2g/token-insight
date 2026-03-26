@@ -49,22 +49,23 @@ const DEFAULT_LAYOUTS: Record<LayoutThemeId, LayoutItem[]> = {
     { i: "health", x: 5, y: 35, w: 7, h: 10 },
   ],
   dock: [
-    { i: "metrics", x: 0, y: 0, w: 7, h: 14 },
-    { i: "models", x: 7, y: 0, w: 5, h: 14 },
-    { i: "trend", x: 0, y: 14, w: 12, h: 11 },
+    { i: "trend", x: 0, y: 0, w: 12, h: 11 },
+    { i: "models", x: 0, y: 14, w: 5, h: 14 },
+    { i: "metrics", x: 5, y: 14, w: 7, h: 14 },
+    
     { i: "sources", x: 0, y: 25, w: 5, h: 10 },
     { i: "rankSources", x: 5, y: 25, w: 7, h: 10 },
     { i: "heatmap", x: 0, y: 35, w: 5, h: 11 },
     { i: "health", x: 5, y: 35, w: 7, h: 10 },
   ],
   radar: [
-    { i: "metrics", x: 0, y: 0, w: 7, h: 14 },
-    { i: "models", x: 7, y: 0, w: 5, h: 14 },
+    { i: "models", x: 0, y: 0, w: 5, h: 14 },
+    { i: "metrics", x: 5, y: 0, w: 7, h: 14 },
     { i: "trend", x: 0, y: 14, w: 12, h: 11 },
-    { i: "sources", x: 0, y: 25, w: 5, h: 10 },
-    { i: "rankSources", x: 5, y: 25, w: 7, h: 10 },
-    { i: "heatmap", x: 0, y: 35, w: 5, h: 11 },
-    { i: "health", x: 5, y: 35, w: 7, h: 10 },
+    { i: "rankSources", x: 0, y: 25, w: 7, h: 10 },
+    { i: "sources", x: 7, y: 25, w: 5, h: 10 },
+    { i: "health", x: 0, y: 35, w: 7, h: 10 },
+    { i: "heatmap", x: 7, y: 35, w: 5, h: 11 },
   ],
 };
 
