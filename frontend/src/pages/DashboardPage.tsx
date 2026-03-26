@@ -24,9 +24,14 @@ import {
   refreshData,
 } from "../lib/api";
 import {
+  DASHBOARD_GRID_COLUMNS,
+  DASHBOARD_GRID_CONTAINER_PADDING,
+  DASHBOARD_GRID_MARGIN,
+  DASHBOARD_GRID_ROW_HEIGHT,
   DASHBOARD_CARD_ORDER,
   clearDashboardLayout,
   defaultDashboardLayout,
+  gridRowsForPixelHeight,
   isCustomDashboardLayout,
   isFixedDashboardCard,
   loadDashboardLayout,
@@ -84,8 +89,17 @@ export default function DashboardPage({
   const dashboardWrapRef = useRef<HTMLDivElement | null>(null);
   const chartWrapRef = useRef<HTMLDivElement | null>(null);
   const filterShellRef = useRef<HTMLDivElement | null>(null);
+  const heatmapPanelRef = useRef<HTMLElement | null>(null);
+  const heatmapBodyRef = useRef<HTMLDivElement | null>(null);
+  const healthPanelRef = useRef<HTMLElement | null>(null);
+  const healthBodyRef = useRef<HTMLDivElement | null>(null);
   const [dashboardWidth, setDashboardWidth] = useState(1320);
   const [chartWidth, setChartWidth] = useState(860);
+  const [gridResizing, setGridResizing] = useState(false);
+  const [heatmapContentHeight, setHeatmapContentHeight] = useState(0);
+  const [heatmapPanelChromeHeight, setHeatmapPanelChromeHeight] = useState(0);
+  const [healthContentHeight, setHealthContentHeight] = useState(0);
+  const [healthPanelChromeHeight, setHealthPanelChromeHeight] = useState(0);
   const [filterBounds, setFilterBounds] = useState({
     left: 0,
     width: 0,
@@ -164,9 +178,88 @@ export default function DashboardPage({
     };
   }, []);
 
+  useEffect(() => {
+    const panel = heatmapPanelRef.current;
+    const body = heatmapBodyRef.current;
+    if (!panel || !body) {
+      return;
+    }
+
+    const update = () => {
+      const next = Math.max(0, panel.offsetHeight - body.clientHeight);
+      setHeatmapPanelChromeHeight((previous) => (previous === next ? previous : next));
+    };
+
+    update();
+    if (typeof ResizeObserver === "undefined") {
+      return;
+    }
+
+    const observer = new ResizeObserver(() => update());
+    observer.observe(panel);
+    observer.observe(body);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const panel = healthPanelRef.current;
+    const body = healthBodyRef.current;
+    if (!panel || !body) {
+      return;
+    }
+
+    const update = () => {
+      const next = Math.max(0, panel.offsetHeight - body.clientHeight);
+      setHealthPanelChromeHeight((previous) => (previous === next ? previous : next));
+    };
+
+    update();
+    if (typeof ResizeObserver === "undefined") {
+      return;
+    }
+
+    const observer = new ResizeObserver(() => update());
+    observer.observe(panel);
+    observer.observe(body);
+    return () => observer.disconnect();
+  }, []);
+
   const normalizedLayout = useMemo(
     () => normalizeDashboardLayout(layoutTheme, cardLayout),
     [cardLayout, layoutTheme],
+  );
+  const heatmapDisplayRows = useMemo(() => {
+    if (heatmapContentHeight <= 0 || heatmapPanelChromeHeight <= 0) {
+      return 0;
+    }
+    return gridRowsForPixelHeight(heatmapContentHeight + heatmapPanelChromeHeight);
+  }, [heatmapContentHeight, heatmapPanelChromeHeight]);
+  const healthDisplayRows = useMemo(() => {
+    if (healthContentHeight <= 0 || healthPanelChromeHeight <= 0) {
+      return 0;
+    }
+    return gridRowsForPixelHeight(healthContentHeight + healthPanelChromeHeight);
+  }, [healthContentHeight, healthPanelChromeHeight]);
+  const runtimeRowOverrides = useMemo<Partial<Record<DashboardCardId, number>>>(
+    () =>
+      gridResizing
+        ? {}
+        : {
+            heatmap: heatmapDisplayRows,
+            health: healthDisplayRows,
+          },
+    [gridResizing, healthDisplayRows, heatmapDisplayRows],
+  );
+  const displayLayout = useMemo(
+    () =>
+      normalizedLayout.map((item) => {
+        const runtimeRows = runtimeRowOverrides[item.i as DashboardCardId] ?? 0;
+        if (runtimeRows <= 0) {
+          return item;
+        }
+        return { ...item, h: Math.max(item.h, runtimeRows) };
+      }),
+    [normalizedLayout, runtimeRowOverrides],
   );
   const layoutCustomized = useMemo(
     () => isCustomDashboardLayout(layoutTheme, normalizedLayout),
@@ -373,7 +466,28 @@ export default function DashboardPage({
   };
 
   const onLayoutChange = (nextLayout: Layout) => {
-    const normalized = normalizeDashboardLayout(layoutTheme, nextLayout);
+    const persistedLayout = nextLayout.map((item) => {
+      const cardId = item.i as DashboardCardId;
+      const runtimeRows = runtimeRowOverrides[cardId] ?? 0;
+      if (runtimeRows <= 0) {
+        return item;
+      }
+
+      const base = normalizedLayout.find((entry) => entry.i === cardId);
+      const displayed = displayLayout.find((entry) => entry.i === cardId);
+      if (!base || !displayed || displayed.h <= base.h || item.h !== displayed.h) {
+        return item;
+      }
+
+      return {
+        ...item,
+        h: base.h,
+      };
+    });
+    const normalized = normalizeDashboardLayout(layoutTheme, persistedLayout);
+    if (isSameLayout(normalizedLayout, normalized)) {
+      return;
+    }
     setCardLayout(normalized);
     saveDashboardLayout(layoutTheme, normalized);
   };
@@ -473,7 +587,11 @@ export default function DashboardPage({
         );
       case "metrics":
         return (
-          <Panel title={t("panel.metrics.title")} subtitle={t("panel.metrics.subtitle")}>
+          <Panel
+            title={t("panel.metrics.title")}
+            subtitle={t("panel.metrics.subtitle")}
+            bodyClassName="core-metrics-panel-body"
+          >
             <CoreMetricsPanel stats={overview} />
           </Panel>
         );
@@ -483,19 +601,36 @@ export default function DashboardPage({
             title={t("panel.heatmap.title")}
             subtitle={t("panel.heatmap.subtitle")}
             bodyClassName="heatmap-panel-body"
+            panelRef={heatmapPanelRef}
+            bodyRef={heatmapBodyRef}
           >
             <ContributionHeatmap
               cells={contributionQuery.data ?? []}
               settings={cycleSettings}
               onSettingsChange={onCycleSettingsChange}
               variant={layoutTheme === "dock" ? "micro" : "compact"}
+              onContentHeightChange={(heightPx) =>
+                setHeatmapContentHeight((previous) => (previous === heightPx ? previous : heightPx))
+              }
             />
           </Panel>
         );
       case "health":
         return (
-          <Panel title={t("panel.health.title")} subtitle={t("panel.health.subtitle")}>
-            <SourceHealthPanel items={sourceStatus} variant="summary" />
+          <Panel
+            title={t("panel.health.title")}
+            subtitle={t("panel.health.subtitle")}
+            bodyClassName="health-panel-body"
+            panelRef={healthPanelRef}
+            bodyRef={healthBodyRef}
+          >
+            <SourceHealthPanel
+              items={sourceStatus}
+              variant="summary"
+              onContentHeightChange={(heightPx) =>
+                setHealthContentHeight((previous) => (previous === heightPx ? previous : heightPx))
+              }
+            />
           </Panel>
         );
       case "models":
@@ -567,17 +702,19 @@ export default function DashboardPage({
         {canEditLayout ? (
           <GridLayout
             className="dashboard-grid"
-            layout={normalizedLayout}
+            layout={displayLayout}
             width={dashboardWidth}
             gridConfig={{
-              cols: 12,
-              rowHeight: 36,
-              margin: [12, 12],
-              containerPadding: [0, 0],
+              cols: DASHBOARD_GRID_COLUMNS,
+              rowHeight: DASHBOARD_GRID_ROW_HEIGHT,
+              margin: DASHBOARD_GRID_MARGIN,
+              containerPadding: DASHBOARD_GRID_CONTAINER_PADDING,
               maxRows: Number.POSITIVE_INFINITY,
             }}
             dragConfig={{ handle: ".dashboard-drag-handle" }}
             resizeConfig={{ handles: ["se"] }}
+            onResizeStart={() => setGridResizing(true)}
+            onResizeStop={() => setGridResizing(false)}
             onLayoutChange={onLayoutChange}
           >
             {DASHBOARD_CARD_ORDER.map((cardId) => (
@@ -709,4 +846,26 @@ function computeTimelineAxisStep(
   const labelWidth = bucket === "daily" ? 72 : bucket === "hourly" ? 110 : 62;
   const maxLabels = Math.max(2, Math.floor(width / labelWidth));
   return Math.max(1, Math.ceil(length / maxLabels));
+}
+
+function isSameLayout(left: LayoutItem[], right: LayoutItem[]) {
+  if (left.length !== right.length) {
+    return false;
+  }
+
+  for (let index = 0; index < left.length; index += 1) {
+    const current = left[index];
+    const next = right[index];
+    if (
+      current.i !== next.i ||
+      current.x !== next.x ||
+      current.y !== next.y ||
+      current.w !== next.w ||
+      current.h !== next.h
+    ) {
+      return false;
+    }
+  }
+
+  return true;
 }

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { SourceStatus } from "../lib/api";
 import { formatDate } from "../lib/format";
 import { useLocale } from "../lib/i18n";
@@ -12,6 +12,7 @@ import {
 type SourceHealthPanelProps = {
   items: SourceStatus[];
   variant?: "detail" | "summary";
+  onContentHeightChange?: (heightPx: number) => void;
 };
 
 type HealthViewMode = "all" | "alerts";
@@ -19,10 +20,12 @@ type HealthViewMode = "all" | "alerts";
 export default function SourceHealthPanel({
   items,
   variant = "detail",
+  onContentHeightChange,
 }: SourceHealthPanelProps) {
   const { locale, t } = useLocale();
+  const rootRef = useRef<HTMLDivElement | null>(null);
   const [viewMode, setViewMode] = useState<HealthViewMode>("all");
-  const [detailsOpen, setDetailsOpen] = useState(variant === "detail");
+  const [detailsOpen, setDetailsOpen] = useState(true);
   const groups = useMemo(() => buildSourceHealthGroups(items), [items]);
   const hasAlerts = groups.alerts.length > 0;
   const highlightRows = hasAlerts ? groups.alerts.slice(0, 3) : groups.active.slice(0, 3);
@@ -45,12 +48,32 @@ export default function SourceHealthPanel({
     }
   }, [variant]);
 
+  useEffect(() => {
+    const element = rootRef.current;
+    if (!element || !onContentHeightChange) {
+      return;
+    }
+
+    const emit = () => {
+      onContentHeightChange(Math.ceil(element.getBoundingClientRect().height));
+    };
+
+    emit();
+    if (typeof ResizeObserver === "undefined") {
+      return;
+    }
+
+    const observer = new ResizeObserver(() => emit());
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [collapsed, detailsOpen, onContentHeightChange, variant, viewMode]);
+
   if (items.length === 0) {
     return <div className="empty-state">{t("health.empty")}</div>;
   }
 
   return (
-    <div className={`health-groups variant-${variant}`}>
+    <div ref={rootRef} className={`health-groups variant-${variant}`}>
       <div className="health-toolbar">
         <p className="health-sort-note">{t("health.sortHint")}</p>
         <div className="health-toolbar-controls">
@@ -125,7 +148,7 @@ export default function SourceHealthPanel({
         </>
       ) : null}
       {detailsOpen || variant === "detail" ? (
-        <div className={variant === "summary" ? "health-details-scroll" : undefined}>
+        <div className={variant === "summary" ? "health-details-stack" : undefined}>
           {viewMode === "alerts" && !hasAlerts ? (
             <div className="empty-state">{t("health.alertsOnlyEmpty")}</div>
           ) : null}

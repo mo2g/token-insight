@@ -13,20 +13,25 @@ import {
 } from "./lib/theme";
 
 const FILTER_PIN_STORAGE_KEY = "token-insight.filter-pinned.v1";
-const APP_MAX_WIDTH = 1440;
-const APP_HORIZONTAL_PADDING = 16;
-const GUTTER_DOCK_MIN = 96;
+const GUTTER_DOCK_MIN = 90;
+const GUTTER_DOCK_WIDTH = 78;
+const GUTTER_DOCK_GAP = 12;
 
 type DockPlacement = "gutter" | "inline" | "corner";
+type DockState = {
+  placement: DockPlacement;
+  gutterLeft?: number;
+};
 
 export default function App() {
   const { locale, setLocale, t } = useLocale();
   const { theme, setTheme, layoutTheme, setLayoutTheme } = useTheme();
   const location = useLocation();
+  const shellRef = useRef<HTMLDivElement | null>(null);
   const mastheadRef = useRef<HTMLElement | null>(null);
   const [mastheadVisible, setMastheadVisible] = useState(true);
   const [filterPinned, setFilterPinned] = useState(() => loadInitialFilterPinned());
-  const [dockPlacement, setDockPlacement] = useState<DockPlacement>(() => resolveDockPlacement());
+  const [dockState, setDockState] = useState<DockState>(() => resolveDockState(null));
   const isDashboard = location.pathname === "/";
   const dockVisible = isDashboard && !mastheadVisible;
 
@@ -55,14 +60,25 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    const update = () => setDockPlacement(resolveDockPlacement());
+    const update = () => setDockState(resolveDockState(shellRef.current));
     update();
+    const shell = shellRef.current;
+    const observer =
+      !shell || typeof ResizeObserver === "undefined"
+        ? null
+        : new ResizeObserver(() => update());
+    if (observer && shell) {
+      observer.observe(shell);
+    }
     window.addEventListener("resize", update);
-    return () => window.removeEventListener("resize", update);
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener("resize", update);
+    };
   }, []);
 
   return (
-    <div className="app-shell">
+    <div ref={shellRef} className="app-shell">
       <header ref={mastheadRef} className="masthead">
         <div className="masthead-brand">
           <h1>Token Insight</h1>
@@ -130,8 +146,9 @@ export default function App() {
 
       {isDashboard ? (
         <MascotDock
-          visible={dockVisible && dockPlacement !== "inline"}
-          placement={dockPlacement === "corner" ? "corner" : "gutter"}
+          visible={dockVisible && dockState.placement !== "inline"}
+          placement={dockState.placement === "corner" ? "corner" : "gutter"}
+          gutterLeft={dockState.gutterLeft}
           filterPinned={filterPinned}
           onTogglePinned={() => setFilterPinned((value) => !value)}
           onScrollTop={() => window.scrollTo({ top: 0, behavior: "smooth" })}
@@ -146,7 +163,7 @@ export default function App() {
               <DashboardPage
                 filterPinned={filterPinned}
                 mastheadCollapsed={!mastheadVisible}
-                inlineDockTools={dockVisible && dockPlacement === "inline"}
+                inlineDockTools={dockVisible && dockState.placement === "inline"}
                 onToggleFilterPinned={() => setFilterPinned((value) => !value)}
                 onScrollTop={() => window.scrollTo({ top: 0, behavior: "smooth" })}
               />
@@ -164,16 +181,24 @@ function loadInitialFilterPinned() {
   return window.localStorage.getItem(FILTER_PIN_STORAGE_KEY) === "true";
 }
 
-function resolveDockPlacement(): DockPlacement {
-  if (typeof window === "undefined") return "gutter";
-  if (window.innerWidth <= 1024) return "corner";
+function resolveDockState(shell: HTMLElement | null): DockState {
+  if (typeof window === "undefined") return { placement: "gutter", gutterLeft: 0 };
+  if (window.innerWidth <= 1024) return { placement: "corner" };
 
-  const shellWidth = Math.min(
-    APP_MAX_WIDTH,
-    Math.max(0, window.innerWidth - APP_HORIZONTAL_PADDING * 2),
-  );
-  const sideGutter = Math.max(0, (window.innerWidth - shellWidth) / 2);
-  return sideGutter >= GUTTER_DOCK_MIN ? "gutter" : "inline";
+  const shellRect = shell?.getBoundingClientRect();
+  if (!shellRect || shellRect.width <= 0) {
+    return { placement: "inline" };
+  }
+
+  const rightGutter = Math.max(0, window.innerWidth - shellRect.right);
+  if (rightGutter < GUTTER_DOCK_MIN || rightGutter < GUTTER_DOCK_WIDTH + GUTTER_DOCK_GAP) {
+    return { placement: "inline" };
+  }
+
+  return {
+    placement: "gutter",
+    gutterLeft: shellRect.right + GUTTER_DOCK_GAP,
+  };
 }
 
 function navClass(isActive: boolean) {

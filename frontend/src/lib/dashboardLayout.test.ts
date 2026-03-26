@@ -11,14 +11,14 @@ describe("dashboardLayout", () => {
   test("provides all cards in default order", () => {
     const layout = defaultDashboardLayout("console");
     expect(layout.map((item) => item.i)).toEqual(DASHBOARD_CARD_ORDER);
-    expect(layout.find((item) => item.i === "metrics")).toMatchObject({ x: 0, y: 0, w: 7, h: 12 });
-    expect(layout.find((item) => item.i === "models")).toMatchObject({ x: 7, y: 0, w: 5, h: 12 });
+    expect(layout.find((item) => item.i === "metrics")).toMatchObject({ x: 0, y: 0, w: 7, h: 14 });
+    expect(layout.find((item) => item.i === "models")).toMatchObject({ x: 7, y: 0, w: 5, h: 14 });
     expect(layout.find((item) => item.i === "trend")?.w).toBe(12);
-    expect(layout.find((item) => item.i === "trend")?.y).toBe(12);
-    expect(layout.find((item) => item.i === "sources")).toMatchObject({ x: 0, y: 23 });
-    expect(layout.find((item) => item.i === "rankSources")).toMatchObject({ x: 5, y: 23 });
-    expect(layout.find((item) => item.i === "heatmap")).toMatchObject({ x: 0, y: 33, w: 7 });
-    expect(layout.find((item) => item.i === "health")).toMatchObject({ x: 7, y: 33, w: 5 });
+    expect(layout.find((item) => item.i === "trend")?.y).toBe(14);
+    expect(layout.find((item) => item.i === "sources")).toMatchObject({ x: 0, y: 25 });
+    expect(layout.find((item) => item.i === "rankSources")).toMatchObject({ x: 5, y: 25 });
+    expect(layout.find((item) => item.i === "heatmap")).toMatchObject({ x: 0, y: 35, w: 5, h: 11 });
+    expect(layout.find((item) => item.i === "health")).toMatchObject({ x: 5, y: 35, w: 7, h: 10 });
   });
 
   test("normalizes card bounds and restores missing cards", () => {
@@ -31,7 +31,7 @@ describe("dashboardLayout", () => {
     const metrics = layout.find((item) => item.i === "metrics");
     expect(metrics?.x).toBe(0);
     expect(metrics?.w).toBeGreaterThanOrEqual(7);
-    expect(metrics?.h).toBe(12);
+    expect(metrics?.h).toBe(14);
 
     const trend = layout.find((item) => item.i === "trend");
     expect(trend?.w).toBe(12);

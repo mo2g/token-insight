@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import type { ContributionCell } from "../lib/api";
 import { formatNumber, formatUsd } from "../lib/format";
@@ -15,21 +15,32 @@ import {
 } from "../lib/heatmapCycles";
 
 type HeatmapVariant = "full" | "compact" | "micro";
+type HeatmapCycleLayout = "auto" | "single-column";
+const HEATMAP_CYCLE_CARD_WIDTH = 248;
+type HeatmapPanelStyle = CSSProperties & {
+  "--heatmap-cycle-card-width": string;
+  "--heatmap-cycle-card-size": string;
+};
 
 type ContributionHeatmapProps = {
   cells: ContributionCell[];
   variant?: HeatmapVariant;
+  cycleLayout?: HeatmapCycleLayout;
   settings: HeatmapCycleSettings;
   onSettingsChange: (next: HeatmapCycleSettings) => void;
+  onContentHeightChange?: (heightPx: number) => void;
 };
 
 export default function ContributionHeatmap({
   cells,
   variant = "full",
+  cycleLayout = "auto",
   settings,
   onSettingsChange,
+  onContentHeightChange,
 }: ContributionHeatmapProps) {
   const { locale, t } = useLocale();
+  const panelRef = useRef<HTMLElement | null>(null);
   const [cycleOrder, setCycleOrder] = useState(() => loadHeatmapCycleOrder());
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dropTargetId, setDropTargetId] = useState<string | null>(null);
@@ -51,9 +62,47 @@ export default function ContributionHeatmap({
   const stripStyle: CSSProperties = {
     gridTemplateColumns: `repeat(${dayColumns}, minmax(0, 1fr))`,
   };
+  const panelStyle: HeatmapPanelStyle = {
+    "--heatmap-cycle-card-width": `${HEATMAP_CYCLE_CARD_WIDTH}px`,
+    "--heatmap-cycle-card-size": `min(100%, ${HEATMAP_CYCLE_CARD_WIDTH}px)`,
+  };
+  const singleColumn = cycleLayout === "single-column";
+
+  useEffect(() => {
+    const element = panelRef.current;
+    if (!element || !onContentHeightChange) {
+      return;
+    }
+
+    const emit = () => {
+      onContentHeightChange(Math.ceil(element.getBoundingClientRect().height));
+    };
+
+    emit();
+    if (typeof ResizeObserver === "undefined") {
+      return;
+    }
+
+    const observer = new ResizeObserver(() => emit());
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [
+    cycleLayout,
+    dayColumns,
+    onContentHeightChange,
+    orderedCycles,
+    variant,
+  ]);
 
   return (
-    <section className={`heatmap-panel ${variant}`} aria-label={t("heatmap.aria")}>
+    <section
+      ref={panelRef}
+      style={panelStyle}
+      className={singleColumn
+        ? `heatmap-panel ${variant} single-column`
+        : `heatmap-panel ${variant}`}
+      aria-label={t("heatmap.aria")}
+    >
       <div className="heatmap-cycle-toolbar">
         <label>
           <span>{t("heatmap.cycle.resetDate")}</span>

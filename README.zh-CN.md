@@ -5,7 +5,7 @@
 Token Insight 是一个本地优先（local-first）的 AI 编码工具 token 使用分析系统。  
 它会扫描本地产物、归一化 usage 事件、写入 SQLite，并提供支持深度筛选的可视化看板与社交分享图能力。
 
-![Token Insight 预览](./docs/assets/dashboard-preview.svg)
+![Token Insight 预览](./docs/assets/token-insight-preview.png)
 
 ## 项目价值
 

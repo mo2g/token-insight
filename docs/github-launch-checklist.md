@@ -21,7 +21,7 @@ Use this checklist after pushing the repository to GitHub.
 
 ## Social Preview
 
-- Upload `docs/assets/dashboard-preview.svg` as the base visual draft.
+- Upload `docs/assets/token-insight-preview.png` as the base visual draft.
 - Recommended final social preview export:
   - PNG
   - 1280x640

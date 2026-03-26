@@ -5,7 +5,7 @@
 Token Insight is a local-first token usage analytics stack for AI coding tools.  
 It scans local artifacts, normalizes usage events, stores them in SQLite, and serves a polished dashboard with deep filtering, trend analysis, and social share cards.
 
-![Token Insight preview](./docs/assets/dashboard-preview.svg)
+![Token Insight preview](./docs/assets/token-insight-preview.png)
 
 ## Why It Is Useful
 

@@ -2,7 +2,10 @@ import type { Layout, LayoutItem } from "react-grid-layout";
 import type { LayoutThemeId } from "./theme";
 
 const STORAGE_KEY_PREFIX = "token-insight.dashboard-layout.v2";
-const GRID_COLUMNS = 12;
+export const DASHBOARD_GRID_COLUMNS = 12;
+export const DASHBOARD_GRID_ROW_HEIGHT = 36;
+export const DASHBOARD_GRID_MARGIN = [12, 12] as const;
+export const DASHBOARD_GRID_CONTAINER_PADDING = [0, 0] as const;
 const MAX_CARD_HEIGHT = 32;
 
 export const DASHBOARD_CARD_ORDER = [
@@ -26,42 +29,42 @@ type CardLimit = {
 };
 
 const CARD_LIMITS: Record<DashboardCardId, CardLimit> = {
-  metrics: { minW: 7, minH: 12, maxW: GRID_COLUMNS, fixedHeight: 12 },
+  metrics: { minW: 7, minH: 14, maxW: DASHBOARD_GRID_COLUMNS, fixedHeight: 14 },
   models: { minW: 5, minH: 12, maxH: MAX_CARD_HEIGHT },
   trend: { minW: 9, minH: 11, maxH: MAX_CARD_HEIGHT },
   sources: { minW: 5, minH: 10, maxH: MAX_CARD_HEIGHT },
   rankSources: { minW: 6, minH: 10, maxH: MAX_CARD_HEIGHT },
-  heatmap: { minW: 5, minH: 11, maxH: MAX_CARD_HEIGHT },
-  health: { minW: 5, minH: 10, maxH: MAX_CARD_HEIGHT },
+  heatmap: { minW: 4, minH: 11, maxH: MAX_CARD_HEIGHT },
+  health: { minW: 4, minH: 10, maxH: MAX_CARD_HEIGHT },
 };
 
 const DEFAULT_LAYOUTS: Record<LayoutThemeId, LayoutItem[]> = {
   console: [
-    { i: "metrics", x: 0, y: 0, w: 7, h: 12 },
-    { i: "models", x: 7, y: 0, w: 5, h: 12 },
-    { i: "trend", x: 0, y: 12, w: 12, h: 11 },
-    { i: "sources", x: 0, y: 23, w: 5, h: 10 },
-    { i: "rankSources", x: 5, y: 23, w: 7, h: 10 },
-    { i: "heatmap", x: 0, y: 33, w: 7, h: 13 },
-    { i: "health", x: 7, y: 33, w: 5, h: 13 },
+    { i: "metrics", x: 0, y: 0, w: 7, h: 14 },
+    { i: "models", x: 7, y: 0, w: 5, h: 14 },
+    { i: "trend", x: 0, y: 14, w: 12, h: 11 },
+    { i: "sources", x: 0, y: 25, w: 5, h: 10 },
+    { i: "rankSources", x: 5, y: 25, w: 7, h: 10 },
+    { i: "heatmap", x: 0, y: 35, w: 5, h: 11 },
+    { i: "health", x: 5, y: 35, w: 7, h: 10 },
   ],
   dock: [
-    { i: "metrics", x: 0, y: 0, w: 7, h: 12 },
-    { i: "models", x: 7, y: 0, w: 5, h: 12 },
-    { i: "trend", x: 0, y: 12, w: 12, h: 11 },
-    { i: "sources", x: 0, y: 23, w: 5, h: 10 },
-    { i: "rankSources", x: 5, y: 23, w: 7, h: 10 },
-    { i: "heatmap", x: 0, y: 33, w: 7, h: 13 },
-    { i: "health", x: 7, y: 33, w: 5, h: 13 },
+    { i: "metrics", x: 0, y: 0, w: 7, h: 14 },
+    { i: "models", x: 7, y: 0, w: 5, h: 14 },
+    { i: "trend", x: 0, y: 14, w: 12, h: 11 },
+    { i: "sources", x: 0, y: 25, w: 5, h: 10 },
+    { i: "rankSources", x: 5, y: 25, w: 7, h: 10 },
+    { i: "heatmap", x: 0, y: 35, w: 5, h: 11 },
+    { i: "health", x: 5, y: 35, w: 7, h: 10 },
   ],
   radar: [
-    { i: "metrics", x: 0, y: 0, w: 7, h: 12 },
-    { i: "models", x: 7, y: 0, w: 5, h: 12 },
-    { i: "trend", x: 0, y: 12, w: 12, h: 11 },
-    { i: "sources", x: 0, y: 23, w: 5, h: 10 },
-    { i: "rankSources", x: 5, y: 23, w: 7, h: 10 },
-    { i: "heatmap", x: 0, y: 33, w: 7, h: 13 },
-    { i: "health", x: 7, y: 33, w: 5, h: 13 },
+    { i: "metrics", x: 0, y: 0, w: 7, h: 14 },
+    { i: "models", x: 7, y: 0, w: 5, h: 14 },
+    { i: "trend", x: 0, y: 14, w: 12, h: 11 },
+    { i: "sources", x: 0, y: 25, w: 5, h: 10 },
+    { i: "rankSources", x: 5, y: 25, w: 7, h: 10 },
+    { i: "heatmap", x: 0, y: 35, w: 5, h: 11 },
+    { i: "health", x: 5, y: 35, w: 7, h: 10 },
   ],
 };
 
@@ -144,8 +147,8 @@ function storageKey(layoutTheme: LayoutThemeId) {
 
 function normalizeItem(cardId: DashboardCardId, item: LayoutItem): LayoutItem {
   const limit = CARD_LIMITS[cardId];
-  const w = clamp(round(item.w, limit.minW), limit.minW, limit.maxW ?? GRID_COLUMNS);
-  const x = clamp(round(item.x, 0), 0, Math.max(0, GRID_COLUMNS - w));
+  const w = clamp(round(item.w, limit.minW), limit.minW, limit.maxW ?? DASHBOARD_GRID_COLUMNS);
+  const x = clamp(round(item.x, 0), 0, Math.max(0, DASHBOARD_GRID_COLUMNS - w));
   const y = Math.max(0, round(item.y, 0));
 
   const h = limit.fixedHeight
@@ -161,9 +164,18 @@ function normalizeItem(cardId: DashboardCardId, item: LayoutItem): LayoutItem {
     h,
     minW: limit.minW,
     minH: limit.fixedHeight ?? limit.minH,
-    maxW: limit.maxW ?? GRID_COLUMNS,
+    maxW: limit.maxW ?? DASHBOARD_GRID_COLUMNS,
     maxH: limit.fixedHeight ?? limit.maxH ?? MAX_CARD_HEIGHT,
   };
+}
+
+export function gridRowsForPixelHeight(heightPx: number) {
+  if (!Number.isFinite(heightPx) || heightPx <= 0) return 1;
+  const [, marginY] = DASHBOARD_GRID_MARGIN;
+  return Math.max(
+    1,
+    Math.ceil((heightPx + marginY) / (DASHBOARD_GRID_ROW_HEIGHT + marginY)),
+  );
 }
 
 function isLayoutLike(value: unknown): value is LayoutItem {

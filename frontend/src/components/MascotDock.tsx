@@ -3,6 +3,7 @@ import { useLocale } from "../lib/i18n";
 type MascotDockProps = {
   visible: boolean;
   placement: "gutter" | "corner";
+  gutterLeft?: number;
   filterPinned: boolean;
   onTogglePinned: () => void;
   onScrollTop: () => void;
@@ -11,6 +12,7 @@ type MascotDockProps = {
 export default function MascotDock({
   visible,
   placement,
+  gutterLeft,
   filterPinned,
   onTogglePinned,
   onScrollTop,
@@ -21,6 +23,9 @@ export default function MascotDock({
     <aside
       className={visible ? `mascot-dock ${placement} visible` : `mascot-dock ${placement}`}
       aria-hidden={!visible}
+      style={placement === "gutter" && typeof gutterLeft === "number"
+        ? { left: `${gutterLeft}px` }
+        : undefined}
     >
       <button
         type="button"

@@ -70,34 +70,42 @@ export default function CoreMetricsPanel({ stats }: CoreMetricsPanelProps) {
         <article className="core-metric-card lead">
           <span>{t("metric.totalTokens")}</span>
           <strong>{formatNumber(totalTokens)}</strong>
-          <p>{t("metric.eventsDetail", { count: stats?.event_count ?? 0 })}</p>
+          <div className="core-metric-bottom">
+            <p>{t("metric.eventsDetail", { count: stats?.event_count ?? 0 })}</p>
+          </div>
         </article>
         <article className="core-metric-card amber cost-card">
           <span>{t("metric.estimatedCostUnit", { unit: costDisplay.unitLabel })}</span>
           <strong>{costDisplay.value}</strong>
-          <div className="core-metric-unit-switch" role="group" aria-label={t("metric.estimatedCost")}>
-            {(["auto", "usd", "cents"] as const).map((mode) => (
-              <button
-                key={mode}
-                type="button"
-                className={costMode === mode ? "cost-unit-button active" : "cost-unit-button"}
-                aria-pressed={costMode === mode}
-                onClick={() => setCostMode(mode)}
-              >
-                {costModeLabel(t, mode)}
-              </button>
-            ))}
+          <div className="core-metric-bottom">
+            <div className="core-metric-unit-switch" role="group" aria-label={t("metric.estimatedCost")}>
+              {(["auto", "usd", "cents"] as const).map((mode) => (
+                <button
+                  key={mode}
+                  type="button"
+                  className={costMode === mode ? "cost-unit-button active" : "cost-unit-button"}
+                  aria-pressed={costMode === mode}
+                  onClick={() => setCostMode(mode)}
+                >
+                  {costModeLabel(t, mode)}
+                </button>
+              ))}
+            </div>
           </div>
         </article>
         <article className="core-metric-card">
           <span>{t("metric.totalEvents")}</span>
           <strong>{formatNumber(stats?.event_count ?? 0)}</strong>
-          <p>{t("metric.streakDetail", { days: stats?.streak_days ?? 0 })}</p>
+          <div className="core-metric-bottom">
+            <p>{t("metric.streakDetail", { days: stats?.streak_days ?? 0 })}</p>
+          </div>
         </article>
         <article className="core-metric-card">
           <span>{t("metric.activeDays")}</span>
           <strong>{formatNumber(stats?.active_days ?? 0)}</strong>
-          <p>{t("metric.topModelDetail", { model: stats?.top_model ?? t("common.na") })}</p>
+          <div className="core-metric-bottom">
+            <p>{t("metric.topModelDetail", { model: stats?.top_model ?? t("common.na") })}</p>
+          </div>
         </article>
       </div>
 
@@ -148,10 +156,7 @@ export default function CoreMetricsPanel({ stats }: CoreMetricsPanelProps) {
         <article>
           <span>{t("metric.lastRefresh")}</span>
           <strong>{formatDateValue(stats?.last_refresh_at, locale, t("common.na"))}</strong>
-        </article>
-        <article>
-          <span>{t("metric.lastEvent")}</span>
-          <strong>{formatDateValue(stats?.last_event_at, locale, t("common.na"))}</strong>
+          <em>{t("metric.lastEventDetail", { value: formatDateValue(stats?.last_event_at, locale, t("common.na")) })}</em>
         </article>
       </div>
     </section>
