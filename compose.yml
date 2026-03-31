@@ -1,0 +1,22 @@
+services:
+  token-insight:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: token-insight:local
+    ports:
+      - "${TOKEN_INSIGHT_PORT:-8787}:8787"
+    environment:
+      TOKEN_INSIGHT_DATA_DIR: /var/lib/token-insight/data
+      TOKEN_INSIGHT_CACHE_DIR: /var/lib/token-insight/cache
+      TOKEN_INSIGHT_HOME: /host-home
+      TOKEN_INSIGHT_SOURCE_ROOT_LITELLM: "${TOKEN_INSIGHT_SOURCE_ROOT_LITELLM:-/host-home/.litellm}"
+    volumes:
+      - token_insight_data:/var/lib/token-insight/data
+      - token_insight_cache:/var/lib/token-insight/cache
+      - ${HOME:-/tmp}:/host-home:ro
+    restart: unless-stopped
+
+volumes:
+  token_insight_data:
+  token_insight_cache:

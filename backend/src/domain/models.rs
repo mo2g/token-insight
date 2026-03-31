@@ -11,6 +11,7 @@ pub enum SourceKind {
     OpenCode,
     Claude,
     OpenClaw,
+    LiteLLM,
     Codex,
     CodexArchived,
     CodexHeadless,
@@ -29,10 +30,11 @@ pub enum SourceKind {
 }
 
 impl SourceKind {
-    pub const ALL: [SourceKind; 18] = [
+    pub const ALL: [SourceKind; 19] = [
         SourceKind::OpenCode,
         SourceKind::Claude,
         SourceKind::OpenClaw,
+        SourceKind::LiteLLM,
         SourceKind::Codex,
         SourceKind::CodexArchived,
         SourceKind::CodexHeadless,
@@ -55,6 +57,7 @@ impl SourceKind {
             SourceKind::OpenCode => "opencode",
             SourceKind::Claude => "claude",
             SourceKind::OpenClaw => "openclaw",
+            SourceKind::LiteLLM => "litellm",
             SourceKind::Codex => "codex",
             SourceKind::CodexArchived => "codex-archived",
             SourceKind::CodexHeadless => "codex-headless",
@@ -78,6 +81,7 @@ impl SourceKind {
             SourceKind::OpenCode => "OpenCode",
             SourceKind::Claude => "Claude",
             SourceKind::OpenClaw => "OpenClaw",
+            SourceKind::LiteLLM => "LiteLLM",
             SourceKind::Codex => "Codex",
             SourceKind::CodexArchived => "Codex Archived",
             SourceKind::CodexHeadless => "Codex Headless",

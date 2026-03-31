@@ -77,6 +77,11 @@ async fn parses_all_source_fixtures() {
             root.join("openclaw/sample.json"),
         ),
         (
+            SourceKind::LiteLLM,
+            InteractionMode::Headless,
+            root.join("litellm/sample.jsonl"),
+        ),
+        (
             SourceKind::Amp,
             InteractionMode::Interactive,
             root.join("amp/sample.json"),
@@ -202,6 +207,11 @@ async fn seeds_database_and_serves_overview_api() {
             SourceKind::Cursor,
             InteractionMode::Interactive,
             root.join("cursor/usage.csv"),
+        ),
+        (
+            SourceKind::LiteLLM,
+            InteractionMode::Headless,
+            root.join("litellm/sample.jsonl"),
         ),
     ];
 

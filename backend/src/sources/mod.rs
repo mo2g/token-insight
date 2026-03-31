@@ -44,6 +44,7 @@ struct TokenBundle {
 
 pub fn default_source_definitions() -> Vec<SourceDefinition> {
     let home = home_dir();
+    let litellm_roots = litellm_roots(&home);
     vec![
         definition(
             SourceKind::OpenCode,
@@ -67,6 +68,11 @@ pub fn default_source_definitions() -> Vec<SourceDefinition> {
                 home.join(".moltbot"),
                 home.join(".moldbot"),
             ],
+        ),
+        definition(
+            SourceKind::LiteLLM,
+            InteractionMode::Headless,
+            &litellm_roots,
         ),
         definition(
             SourceKind::Codex,
@@ -235,9 +241,37 @@ fn definition(kind: SourceKind, mode: InteractionMode, roots: &[PathBuf]) -> Sou
 }
 
 fn home_dir() -> PathBuf {
+    if let Ok(path) = std::env::var("TOKEN_INSIGHT_HOME") {
+        return PathBuf::from(path);
+    }
+
     std::env::var("HOME")
         .map(PathBuf::from)
         .unwrap_or_else(|_| PathBuf::from("/"))
+}
+
+fn litellm_roots(home: &Path) -> Vec<PathBuf> {
+    let roots = source_roots_from_env("TOKEN_INSIGHT_SOURCE_ROOT_LITELLM");
+    if !roots.is_empty() {
+        return roots;
+    }
+    vec![home.join(".litellm")]
+}
+
+fn source_roots_from_env(variable: &str) -> Vec<PathBuf> {
+    let mut roots = std::env::var(variable)
+        .ok()
+        .map(|raw| {
+            raw.split(',')
+                .map(str::trim)
+                .filter(|value| !value.is_empty())
+                .map(PathBuf::from)
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default();
+    roots.sort();
+    roots.dedup();
+    roots
 }
 
 fn matches_source_file(source: SourceKind, path: &Path) -> bool {
@@ -253,6 +287,7 @@ fn matches_source_file(source: SourceKind, path: &Path) -> bool {
         .to_ascii_lowercase();
     match source {
         SourceKind::Claude
+        | SourceKind::LiteLLM
         | SourceKind::Codex
         | SourceKind::CodexArchived
         | SourceKind::CodexHeadless => ext == "jsonl",
@@ -270,6 +305,7 @@ fn parse_jsonl(definition: &SourceDefinition, path: &Path) -> Result<Vec<UsageEv
     let text = std::fs::read_to_string(path)?;
     match definition.kind {
         SourceKind::Claude => parse_claude_jsonl(definition, path, &text),
+        SourceKind::LiteLLM => parse_litellm_jsonl(definition, path, &text),
         SourceKind::Codex | SourceKind::CodexArchived | SourceKind::CodexHeadless => {
             parse_codex_jsonl(definition, path, &text)
         }
@@ -599,6 +635,138 @@ fn parse_codex_jsonl(
     Ok(events)
 }
 
+fn parse_litellm_jsonl(
+    definition: &SourceDefinition,
+    path: &Path,
+    text: &str,
+) -> Result<Vec<UsageEvent>> {
+    let mut events = Vec::new();
+
+    for (index, line) in text.lines().enumerate() {
+        if line.trim().is_empty() {
+            continue;
+        }
+
+        let value: Value = match serde_json::from_str(line) {
+            Ok(value) => value,
+            Err(_) => continue,
+        };
+        let Some(object) = value.as_object() else {
+            continue;
+        };
+
+        let Some(tokens) = token_bundle_from_value(&value).map(TokenBundle::with_total) else {
+            continue;
+        };
+        if tokens.total_tokens <= 0 {
+            continue;
+        }
+
+        let metadata = object.get("metadata").and_then(Value::as_object);
+        let request = object.get("request").and_then(Value::as_object);
+        let litellm_params = object.get("litellm_params").and_then(Value::as_object);
+        let request_id = extract_string(
+            object,
+            &[
+                "request_id",
+                "id",
+                "call_id",
+                "completion_id",
+                "response_id",
+            ],
+        );
+        let local_id = request_id
+            .clone()
+            .unwrap_or_else(|| format!("jsonl:{index}"));
+
+        let timestamp = extract_datetime(
+            object,
+            &[
+                "end_time",
+                "timestamp",
+                "start_time",
+                "created_at",
+                "request_time",
+                "date",
+            ],
+        )
+        .or_else(|| {
+            metadata.and_then(|metadata| {
+                extract_datetime(
+                    metadata,
+                    &[
+                        "end_time",
+                        "timestamp",
+                        "start_time",
+                        "created_at",
+                        "request_time",
+                    ],
+                )
+            })
+        })
+        .unwrap_or_else(Utc::now);
+
+        let model = extract_string(object, &["model", "model_name"])
+            .or_else(|| metadata.and_then(|metadata| extract_string(metadata, &["model"])))
+            .or_else(|| request.and_then(|request| extract_string(request, &["model"])))
+            .or_else(|| {
+                litellm_params.and_then(|params| extract_string(params, &["model", "model_name"]))
+            })
+            .or_else(|| object.get("metadata").and_then(extract_model_from_value))
+            .or_else(|| object.get("request").and_then(extract_model_from_value));
+
+        let provider = extract_string(object, &["custom_llm_provider", "provider"])
+            .or_else(|| {
+                litellm_params
+                    .and_then(|params| extract_string(params, &["custom_llm_provider", "provider"]))
+            })
+            .or_else(|| metadata.and_then(|metadata| extract_string(metadata, &["provider"])))
+            .or_else(|| infer_provider(model.as_deref()));
+
+        let project = extract_string(object, &["project", "workspace"])
+            .or_else(|| {
+                metadata.and_then(|metadata| {
+                    extract_string(
+                        metadata,
+                        &["project", "workspace", "user_api_key_alias", "user"],
+                    )
+                })
+            })
+            .or_else(|| infer_project_from_path(path));
+
+        let mut event = event_from_context(
+            ParsedContext {
+                source: definition.kind,
+                mode: definition.mode,
+                path: path.display().to_string(),
+                session_id: extract_string(object, &["session_id", "trace_id", "thread_id"])
+                    .or_else(|| {
+                        metadata.and_then(|metadata| {
+                            extract_string(metadata, &["session_id", "trace_id", "thread_id"])
+                        })
+                    })
+                    .or(request_id),
+                timestamp: Some(timestamp),
+                project,
+                cwd: extract_string(object, &["cwd"])
+                    .or_else(|| metadata.and_then(|metadata| extract_string(metadata, &["cwd"]))),
+                provider,
+                model,
+                role: extract_string(object, &["role"]),
+                raw_kind: Some("litellm-spend-log".into()),
+            },
+            tokens,
+            &local_id,
+        );
+        if event.model_family.is_none() {
+            event.model_family = event.model.as_deref().map(derive_model_family);
+        }
+        events.push(event);
+    }
+
+    Ok(events)
+}
+
 fn extract_model_from_object(object: &Map<String, Value>) -> Option<String> {
     extract_string(object, &["model", "model_name"])
         .or_else(|| object.get("metadata").and_then(extract_model_from_value))
@@ -853,8 +1021,14 @@ fn token_bundle_from_value(value: &Value) -> Option<TokenBundle> {
         return Some(bundle);
     }
 
-    let prompt = extract_number(object, &["input_tokens", "prompt_tokens", "input"]);
-    let completion = extract_number(object, &["output_tokens", "completion_tokens", "output"]);
+    let prompt = extract_number(
+        object,
+        &["input_tokens", "prompt_tokens", "input", "tokens_in"],
+    );
+    let completion = extract_number(
+        object,
+        &["output_tokens", "completion_tokens", "output", "tokens_out"],
+    );
     let cache_read = extract_number(
         object,
         &[
@@ -870,8 +1044,11 @@ fn token_bundle_from_value(value: &Value) -> Option<TokenBundle> {
         &["reasoning_tokens", "reasoning_output_tokens", "thoughts"],
     );
     let tool = extract_number(object, &["tool_tokens", "tool"]);
-    let total = extract_number(object, &["total_tokens", "total"]);
-    let cost = extract_float(object, &["estimated_cost_usd", "cost"]);
+    let total = extract_number(object, &["total_tokens", "total", "total_token_count"]);
+    let cost = extract_float(
+        object,
+        &["estimated_cost_usd", "cost", "response_cost", "total_cost"],
+    );
 
     if [
         prompt,
@@ -938,7 +1115,9 @@ fn parse_datetime_value(value: &Value) -> Option<DateTime<Utc>> {
     match value {
         Value::String(value) => parse_datetime_str(value),
         Value::Number(value) => {
-            let value = value.as_i64()?;
+            let value = value
+                .as_i64()
+                .or_else(|| value.as_f64().map(|value| value as i64))?;
             if value > 10_000_000_000 {
                 Utc.timestamp_millis_opt(value).single()
             } else {
@@ -1073,6 +1252,28 @@ mod tests {
                 tool_tokens: 0,
                 total_tokens: 0,
                 explicit_cost_usd: None,
+            })
+        );
+    }
+
+    #[test]
+    fn extracts_litellm_token_aliases() {
+        let value = json!({
+            "tokens_in": 12,
+            "tokens_out": 7,
+            "response_cost": 0.23
+        });
+        assert_eq!(
+            token_bundle_from_value(&value),
+            Some(TokenBundle {
+                prompt_tokens: 12,
+                completion_tokens: 7,
+                cache_read_tokens: 0,
+                cache_write_tokens: 0,
+                reasoning_tokens: 0,
+                tool_tokens: 0,
+                total_tokens: 0,
+                explicit_cost_usd: Some(0.23),
             })
         );
     }

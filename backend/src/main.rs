@@ -1,4 +1,4 @@
-use std::{path::PathBuf, str::FromStr, sync::Arc};
+use std::{net::IpAddr, path::PathBuf, str::FromStr, sync::Arc};
 
 use anyhow::Result;
 use clap::{Args, Parser, Subcommand, ValueEnum};
@@ -37,6 +37,8 @@ struct OutputArgs {
 
 #[derive(Debug, Args)]
 struct ServeArgs {
+    #[arg(long, default_value = "127.0.0.1")]
+    host: IpAddr,
     #[arg(long, default_value_t = 8787)]
     port: u16,
     #[arg(long)]
@@ -249,7 +251,7 @@ async fn main() -> Result<()> {
                     tracing::error!(%error, "watcher stopped");
                 }
             });
-            api::serve(state, args.port, args.static_dir).await?;
+            api::serve(state, args.host, args.port, args.static_dir).await?;
         }
         Command::Export(args) => {
             let dataset = ExportDataset::from_str(&args.dataset).map_err(anyhow::Error::msg)?;

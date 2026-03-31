@@ -1,4 +1,7 @@
-use std::{net::SocketAddr, path::PathBuf};
+use std::{
+    net::{IpAddr, SocketAddr},
+    path::PathBuf,
+};
 
 use anyhow::Result;
 use axum::{
@@ -33,9 +36,14 @@ struct ExportQuery {
     filter: UsageFilterQuery,
 }
 
-pub async fn serve(state: AppState, port: u16, static_dir: Option<PathBuf>) -> Result<()> {
+pub async fn serve(
+    state: AppState,
+    host: IpAddr,
+    port: u16,
+    static_dir: Option<PathBuf>,
+) -> Result<()> {
     let router = router(state.clone(), static_dir);
-    let address = SocketAddr::from(([127, 0, 0, 1], port));
+    let address = SocketAddr::from((host, port));
     let listener = tokio::net::TcpListener::bind(address).await?;
     tracing::info!(%address, "token insight server listening");
     axum::serve(listener, router).await?;
