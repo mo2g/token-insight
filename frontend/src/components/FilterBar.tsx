@@ -59,7 +59,7 @@ export default function FilterBar({
   const presets = [
     { value: "today", label: t("filter.preset.today") },
     { value: "week", label: t("filter.preset.week") },
-    { value: "month", label: t("filter.preset.month") },
+    { value: "recent30d", label: t("filter.preset.recent30d") },
     { value: "year", label: t("filter.preset.year") },
     { value: "all", label: t("filter.preset.all") },
   ];

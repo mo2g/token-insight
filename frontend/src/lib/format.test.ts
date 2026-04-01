@@ -1,5 +1,12 @@
 import { describe, expect, test } from "vitest";
-import { formatCompactNumber, formatCompactUsd, formatDate, formatUsd } from "./format";
+import {
+  formatCompactNumber,
+  formatCompactUsd,
+  formatDate,
+  formatUsd,
+  formatUsdPrecise,
+  formatUsdValue,
+} from "./format";
 
 describe("formatCompactNumber", () => {
   test("formats small values as rounded integers", () => {
@@ -30,6 +37,15 @@ describe("locale-aware formatters", () => {
   test("formats usd by locale", () => {
     expect(formatUsd(1234.5, "en")).toContain("$");
     expect(formatUsd(1234.5, "zh-CN").length).toBeGreaterThan(0);
+  });
+
+  test("formats usd value without a currency symbol", () => {
+    expect(formatUsdValue(1234.5, "en")).toBe("1,234.50");
+  });
+
+  test("keeps precise usd values visible when needed", () => {
+    expect(formatUsdPrecise(0.0001234, "en")).toBe("$0.000123");
+    expect(formatUsdPrecise(12.3456, "en")).toBe("$12.3456");
   });
 
   test("returns fallback text when date is missing", () => {

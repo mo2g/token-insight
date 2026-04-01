@@ -1,5 +1,5 @@
-import { fireEvent, render, screen } from "@testing-library/react";
-import { beforeEach, describe, expect, test } from "vitest";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import FilterBar from "./FilterBar";
 import { LocaleProvider } from "../lib/i18n";
 import type { UsageFilter } from "../lib/api";
@@ -10,7 +10,7 @@ const baseFilter: UsageFilter = {
   models: [],
   modelFamilies: [],
   projects: [],
-  preset: "month",
+  preset: "recent30d",
   timezone: "UTC",
   sort: "tokens:desc",
   excludeArchived: false,
@@ -42,8 +42,12 @@ function renderFilterBar(filter: UsageFilter = baseFilter) {
 }
 
 describe("FilterBar", () => {
+  afterEach(() => {
+    cleanup();
+  });
+
   beforeEach(() => {
-    const store = new Map<string, string>();
+    const store = new Map<string, string>([["token-insight.locale", "en"]]);
     Object.defineProperty(window, "localStorage", {
       configurable: true,
       value: {
@@ -65,6 +69,13 @@ describe("FilterBar", () => {
     renderFilterBar();
 
     expect(screen.queryByText("Current: default scope")).not.toBeInTheDocument();
+  });
+
+  test("shows the recent 30 day preset and hides the legacy month preset", () => {
+    renderFilterBar();
+
+    expect(screen.getByRole("button", { name: "Recent 30D" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.queryByRole("button", { name: "This Month" })).not.toBeInTheDocument();
   });
 
   test("renders model summary chip and overlay in a portal", () => {

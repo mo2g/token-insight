@@ -6,7 +6,7 @@ export const defaultFilter: UsageFilter = {
   models: [],
   modelFamilies: [],
   projects: [],
-  preset: "month",
+  preset: "recent30d",
   sort: "tokens:desc",
   timezone: detectTimezone(),
   excludeArchived: false,

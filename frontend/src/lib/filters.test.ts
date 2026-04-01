@@ -11,7 +11,7 @@ describe("filter serialization", () => {
         models: ["claude-sonnet-4-5"],
         modelFamilies: ["claude-sonnet"],
         projects: ["/tmp/demo"],
-        preset: "week",
+        preset: "recent30d",
         sort: "cost:desc",
         timezone: "Asia/Shanghai",
         excludeArchived: true,
@@ -23,9 +23,17 @@ describe("filter serialization", () => {
     expect(filter.models).toEqual(["claude-sonnet-4-5"]);
     expect(filter.modelFamilies).toEqual(["claude-sonnet"]);
     expect(filter.projects).toEqual(["/tmp/demo"]);
-    expect(filter.preset).toBe("week");
+    expect(filter.preset).toBe("recent30d");
     expect(filter.sort).toBe("cost:desc");
     expect(filter.timezone).toBe("Asia/Shanghai");
     expect(filter.excludeArchived).toBe(true);
+  });
+
+  test("defaults to recent30d when preset is absent", () => {
+    expect(parseFilter(new URLSearchParams()).preset).toBe("recent30d");
+  });
+
+  test("preserves legacy month preset values", () => {
+    expect(parseFilter(new URLSearchParams("preset=month")).preset).toBe("month");
   });
 });

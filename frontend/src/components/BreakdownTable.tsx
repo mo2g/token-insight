@@ -6,7 +6,7 @@ import {
 } from "@tanstack/react-table";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { BreakdownRow } from "../lib/api";
-import { formatNumber, formatUsd } from "../lib/format";
+import { formatNumber, formatUsd, formatUsdPrecise, formatUsdValue } from "../lib/format";
 import { useLocale } from "../lib/i18n";
 
 type BreakdownTableProps = {
@@ -123,7 +123,15 @@ function buildColumns(
       }),
       helper.accessor("total_cost_usd", {
         header: t("table.cost"),
-        cell: (info) => formatUsd(info.getValue(), locale),
+        cell: (info) => (
+          <CostCell
+            totalCostUsd={info.getValue()}
+            totalTokens={info.row.original.total_tokens}
+            locale={locale}
+            t={t}
+            tooltipId={`cost-tooltip-${info.row.id}`}
+          />
+        ),
       }),
     ];
   }
@@ -143,7 +151,7 @@ function buildColumns(
     }),
     helper.accessor("total_cost_usd", {
       header: t("table.cost"),
-      cell: (info) => formatUsd(info.getValue(), locale),
+      cell: (info) => formatUsdValue(info.getValue(), locale),
     }),
   ];
 
@@ -169,4 +177,38 @@ function headerClass(columnId: string) {
 function cellClass(columnId: string) {
   if (columnId === "label") return "table-cell-label";
   return "table-cell-number";
+}
+
+type CostCellProps = {
+  totalCostUsd: number;
+  totalTokens: number;
+  locale: ReturnType<typeof useLocale>["locale"];
+  t: ReturnType<typeof useLocale>["t"];
+  tooltipId: string;
+};
+
+function CostCell({ totalCostUsd, totalTokens, locale, t, tooltipId }: CostCellProps) {
+  const averagePerMillionText =
+    totalTokens > 0
+      ? formatUsdPrecise((totalCostUsd / totalTokens) * 1_000_000, locale)
+      : t("common.na");
+  const tooltipText = t("table.costPerMillion", { value: averagePerMillionText });
+
+  return (
+    <span className="cost-cell">
+      <span className="cost-cell-value">{formatUsdValue(totalCostUsd, locale)}</span>
+      <span className="cost-cell-info">
+        <button
+          type="button"
+          className="cost-cell-badge"
+          aria-describedby={tooltipId}
+        >
+          1M
+        </button>
+        <span id={tooltipId} className="cost-cell-tooltip" role="tooltip">
+          {tooltipText}
+        </span>
+      </span>
+    </span>
+  );
 }

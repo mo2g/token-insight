@@ -11,6 +11,8 @@ use crate::domain::{InteractionMode, SourceKind, UsageEvent};
 pub enum DatePreset {
     Today,
     Week,
+    #[serde(rename = "recent30d")]
+    Recent30d,
     Month,
     Year,
     All,
@@ -23,6 +25,7 @@ impl FromStr for DatePreset {
         match value.trim().to_ascii_lowercase().as_str() {
             "today" => Ok(Self::Today),
             "week" => Ok(Self::Week),
+            "recent30d" => Ok(Self::Recent30d),
             "month" => Ok(Self::Month),
             "year" => Ok(Self::Year),
             "all" | "" => Ok(Self::All),
@@ -223,24 +226,9 @@ impl UsageFilter {
         }
 
         let today = today_in_timezone(self.parsed_timezone());
-        match self.preset.unwrap_or(DatePreset::All) {
-            DatePreset::Today => {
-                self.since = Some(today);
-                self.until = Some(today);
-            }
-            DatePreset::Week => {
-                self.since = Some(today - Duration::days(6));
-                self.until = Some(today);
-            }
-            DatePreset::Month => {
-                self.since = NaiveDate::from_ymd_opt(today.year(), today.month(), 1);
-                self.until = Some(today);
-            }
-            DatePreset::Year => {
-                self.since = NaiveDate::from_ymd_opt(today.year(), 1, 1);
-                self.until = Some(today);
-            }
-            DatePreset::All => {}
+        if let Some((since, until)) = preset_range(self.preset.unwrap_or(DatePreset::All), today) {
+            self.since = Some(since);
+            self.until = Some(until);
         }
     }
 
@@ -400,6 +388,19 @@ fn parse_date(value: Option<&str>) -> Option<NaiveDate> {
     value.and_then(|value| NaiveDate::parse_from_str(value.trim(), "%Y-%m-%d").ok())
 }
 
+fn preset_range(preset: DatePreset, today: NaiveDate) -> Option<(NaiveDate, NaiveDate)> {
+    match preset {
+        DatePreset::Today => Some((today, today)),
+        DatePreset::Week => Some((today - Duration::days(6), today)),
+        DatePreset::Recent30d => Some((today - Duration::days(29), today)),
+        DatePreset::Month => {
+            NaiveDate::from_ymd_opt(today.year(), today.month(), 1).map(|since| (since, today))
+        }
+        DatePreset::Year => NaiveDate::from_ymd_opt(today.year(), 1, 1).map(|since| (since, today)),
+        DatePreset::All => None,
+    }
+}
+
 fn contains_ci(haystack: &[String], needle: &str) -> bool {
     haystack
         .iter()
@@ -411,7 +412,9 @@ mod tests {
     use chrono::NaiveDate;
     use serde_json::json;
 
-    use super::{DatePreset, SortDirection, SortField, SortSpec, UsageFilter, UsageFilterQuery};
+    use super::{
+        DatePreset, SortDirection, SortField, SortSpec, UsageFilter, UsageFilterQuery, preset_range,
+    };
 
     #[test]
     fn parses_sort_spec() {
@@ -423,12 +426,31 @@ mod tests {
     #[test]
     fn applies_preset_when_dates_missing() {
         let filter = UsageFilter::from(UsageFilterQuery {
-            preset: Some("month".into()),
+            preset: Some("recent30d".into()),
             ..UsageFilterQuery::default()
         });
-        assert_eq!(filter.preset, Some(DatePreset::Month));
+        assert_eq!(filter.preset, Some(DatePreset::Recent30d));
         assert!(filter.since.is_some());
         assert!(filter.until.is_some());
+    }
+
+    #[test]
+    fn preset_ranges_keep_month_and_recent_30_days_distinct() {
+        let today = NaiveDate::from_ymd_opt(2026, 4, 15).expect("today");
+        assert_eq!(
+            preset_range(DatePreset::Recent30d, today),
+            Some((
+                NaiveDate::from_ymd_opt(2026, 3, 17).expect("recent30d start"),
+                today,
+            ))
+        );
+        assert_eq!(
+            preset_range(DatePreset::Month, today),
+            Some((
+                NaiveDate::from_ymd_opt(2026, 4, 1).expect("month start"),
+                today
+            ))
+        );
     }
 
     #[test]

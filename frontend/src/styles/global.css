@@ -775,6 +775,17 @@ select {
   color: var(--control-active-text);
 }
 
+.filter-bar .button:hover,
+.filter-bar .button:focus-visible,
+.filter-bar .preset-button:hover,
+.filter-bar .preset-button:focus-visible,
+.filter-bar .model-spend-button:hover,
+.filter-bar .model-spend-button:focus-visible,
+.filter-bar .filter-pill:hover,
+.filter-bar .filter-pill:focus-visible {
+  transform: none;
+}
+
 .search-inline input {
   width: min(360px, 58vw);
   padding: 7px 10px;
@@ -1363,7 +1374,8 @@ select {
 }
 
 .table-wrap.no-scroll {
-  overflow-x: hidden;
+  overflow: visible;
+  align-self: start;
 }
 
 .breakdown-table {
@@ -1451,6 +1463,77 @@ th {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.cost-cell {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
+}
+
+.cost-cell-value {
+  min-width: 0;
+}
+
+.cost-cell-info {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.cost-cell-badge {
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--amber) 38%, var(--table-border));
+  padding: 1px 6px;
+  background: color-mix(in srgb, var(--amber) 18%, var(--panel-soft));
+  color: var(--text);
+  cursor: help;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  transition: border-color 160ms ease, background 160ms ease, box-shadow 160ms ease;
+}
+
+.cost-cell-badge:hover,
+.cost-cell-badge:focus-visible {
+  border-color: color-mix(in srgb, var(--amber) 58%, var(--table-border));
+  background: color-mix(in srgb, var(--amber) 28%, var(--panel-soft));
+}
+
+.cost-cell-badge:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--amber) 34%, transparent);
+}
+
+.cost-cell-tooltip {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  min-width: 180px;
+  max-width: 240px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--panel-border);
+  background: color-mix(in srgb, var(--panel) 92%, transparent);
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.18);
+  color: var(--text);
+  font-size: 11px;
+  line-height: 1.35;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-4px);
+  transition: opacity 160ms ease, transform 160ms ease;
+  z-index: 3;
+}
+
+.cost-cell-info:hover .cost-cell-tooltip,
+.cost-cell-info:focus-within .cost-cell-tooltip {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .table-wrap.density-mini th,

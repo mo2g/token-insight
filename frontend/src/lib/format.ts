@@ -30,6 +30,22 @@ export function formatUsd(value: number, locale: Locale) {
   }).format(value);
 }
 
+export function formatUsdValue(value: number, locale: Locale) {
+  return new Intl.NumberFormat(locale, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value);
+}
+
+export function formatUsdPrecise(value: number, locale: Locale) {
+  return new Intl.NumberFormat(locale, {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 6,
+  }).format(value);
+}
+
 export function formatDate(value: string | undefined, locale: Locale, emptyText = "n/a") {
   if (!value) return emptyText;
   return new Date(value).toLocaleString(locale);
