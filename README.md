@@ -1,5 +1,10 @@
 # Token Insight
 
+[![Docker Hub](https://img.shields.io/badge/Docker%20Hub-mo2g%2Ftoken--insight-2496ED?logo=docker&logoColor=white)](https://hub.docker.com/r/mo2g/token-insight)
+[![GitHub Repo](https://img.shields.io/badge/GitHub-mo2g%2Ftoken--insight-181717?logo=github&logoColor=white)](https://github.com/mo2g/token-insight)
+
+
+
 [中文文档](./README.zh-CN.md)
 
 Token Insight is a local-first token usage analytics stack for AI coding tools.  
@@ -23,6 +28,29 @@ It scans local artifacts, normalizes usage events, stores them in SQLite, and se
 
 ## Quick Start
 
+### Run with Docker Compose
+
+```bash
+docker compose up --build
+
+docker run --rm -p 8787:8787 \
+  -v $HOME:/host-home:ro \
+  -e TOKEN_INSIGHT_HOME=/host-home \
+  -e TOKEN_INSIGHT_SOURCE_ROOT_LITELLM=/host-home/.litellm \
+  mo2g/token-insight:latest
+```
+
+Open `http://localhost:8787`.
+
+The compose stack mounts your host home directory as read-only at `/host-home` and sets:
+
+- `TOKEN_INSIGHT_HOME=/host-home`
+- `TOKEN_INSIGHT_SOURCE_ROOT_LITELLM=/host-home/.litellm` (override when LiteLLM logs are elsewhere)
+
+Container runtime uses `gcr.io/distroless/cc-debian12` to reduce image size while keeping required glibc runtime libraries.
+Distroless images do not include a shell or package manager, so use logs and HTTP health endpoints for diagnostics.
+
+
 ### Requirements
 
 - Rust stable toolchain (`cargo`)
@@ -45,22 +73,6 @@ bun --cwd frontend build
 
 Open the frontend URL printed by Vite (default `http://localhost:5173`).  
 Backend defaults to `http://127.0.0.1:8787`.
-
-### Run with Docker Compose
-
-```bash
-docker compose up --build
-```
-
-Open `http://localhost:8787`.
-
-The compose stack mounts your host home directory as read-only at `/host-home` and sets:
-
-- `TOKEN_INSIGHT_HOME=/host-home`
-- `TOKEN_INSIGHT_SOURCE_ROOT_LITELLM=/host-home/.litellm` (override when LiteLLM logs are elsewhere)
-
-Container runtime uses `gcr.io/distroless/cc-debian12` to reduce image size while keeping required glibc runtime libraries.
-Distroless images do not include a shell or package manager, so use logs and HTTP health endpoints for diagnostics.
 
 ## Common Commands
 
