@@ -2,8 +2,9 @@ services:
   token-insight:
     build:
       context: .
-      dockerfile: Dockerfile
-    image: token-insight:local
+#      dockerfile: Dockerfile
+      dockerfile: Dockerfile.scratch
+    image: token-insight:scratch
     ports:
       - "${TOKEN_INSIGHT_PORT:-8787}:8787"
     environment:

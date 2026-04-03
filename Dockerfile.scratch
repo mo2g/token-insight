@@ -1,0 +1,59 @@
+# syntax=docker/dockerfile:1.7
+
+# 在 Apple Silicon 上强制构建 amd64 镜像
+# docker buildx build --platform linux/amd64 -f Dockerfile.scratch -t token-insight:scratch .
+
+FROM oven/bun:1.2.22 AS frontend-builder
+WORKDIR /app/frontend
+
+COPY frontend/package.json frontend/bun.lock ./
+RUN bun install --frozen-lockfile
+
+COPY frontend/ ./
+RUN bun run build
+
+
+FROM rust:1.88-bookworm AS backend-builder
+WORKDIR /app
+
+ARG TARGETARCH
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends musl-tools ca-certificates binutils \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY backend/Cargo.toml backend/Cargo.lock backend/
+COPY backend/src backend/src
+COPY backend/assets backend/assets
+
+RUN set -eux; \
+    case "${TARGETARCH}" in \
+      amd64) RUST_TARGET=x86_64-unknown-linux-musl ;; \
+      arm64) RUST_TARGET=aarch64-unknown-linux-musl ;; \
+      *) echo "Unsupported TARGETARCH: ${TARGETARCH}"; exit 1 ;; \
+    esac; \
+    rustup target add "${RUST_TARGET}"; \
+    cargo build \
+      --manifest-path backend/Cargo.toml \
+      --release \
+      --target "${RUST_TARGET}"; \
+    strip "/app/backend/target/${RUST_TARGET}/release/token-insight"; \
+    cp "/app/backend/target/${RUST_TARGET}/release/token-insight" /tmp/token-insight
+
+
+FROM scratch
+
+WORKDIR /opt/token-insight
+
+COPY --from=backend-builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
+COPY --from=backend-builder /tmp/token-insight /usr/local/bin/token-insight
+COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
+
+ENV TOKEN_INSIGHT_DATA_DIR=/var/lib/token-insight/data
+ENV TOKEN_INSIGHT_CACHE_DIR=/var/lib/token-insight/cache
+ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
+
+EXPOSE 8787
+
+ENTRYPOINT ["/usr/local/bin/token-insight"]
+CMD ["serve", "--host", "0.0.0.0", "--port", "8787", "--static-dir", "/opt/token-insight/frontend/dist"]
