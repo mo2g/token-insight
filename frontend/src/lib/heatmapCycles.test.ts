@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, test } from "vitest";
 import type { ContributionCell } from "./api";
 import {
   buildHeatmapCycles,
+  buildHeatmapCycleComparison,
   loadHeatmapCycleOrder,
   moveHeatmapCycleOrder,
   normalizeHeatmapCycleSettings,
@@ -33,6 +34,38 @@ const cells: ContributionCell[] = [
     total_tokens: 80,
     total_cost_usd: 0.12,
     intensity: 0.3,
+  },
+  {
+    day: "2026-03-12",
+    week_index: 1,
+    weekday: 3,
+    total_tokens: 90,
+    total_cost_usd: 0.15,
+    intensity: 0.3,
+  },
+  {
+    day: "2026-03-14",
+    week_index: 1,
+    weekday: 5,
+    total_tokens: 60,
+    total_cost_usd: 0.1,
+    intensity: 0.25,
+  },
+  {
+    day: "2026-03-06",
+    week_index: 2,
+    weekday: 5,
+    total_tokens: 50,
+    total_cost_usd: 0.08,
+    intensity: 0.2,
+  },
+  {
+    day: "2026-02-27",
+    week_index: 3,
+    weekday: 4,
+    total_tokens: 70,
+    total_cost_usd: 0.11,
+    intensity: 0.25,
   },
 ];
 
@@ -67,6 +100,40 @@ describe("heatmapCycles", () => {
     expect(data.cycles[0]?.activeDays).toBe(3);
     expect(data.cycles[0]?.totalTokens).toBe(230);
     expect(data.cycles[1]?.startDay).toBe("2026-03-12");
+  });
+
+  test("builds cycle comparison stats and curves", () => {
+    const data = buildHeatmapCycleComparison(
+      cells,
+      { resetDate: "2026-03-25", cycleDays: 7 },
+      new Date("2026-03-24T08:00:00Z"),
+    );
+    const current = data.cycles[0];
+    const previous = data.cycles[1];
+    const currentCurvePoints = current?.curvePoints ?? [];
+    const previousCurvePoints = previous?.curvePoints ?? [];
+
+    expect(data.cycles).toHaveLength(4);
+    expect(data.stats.current.totalTokens).toBe(230);
+    expect(data.stats.current.observedTotalTokens).toBe(150);
+    expect(data.stats.current.observedActiveDays).toBe(2);
+    expect(data.stats.current.elapsedDays).toBe(6);
+    expect(data.stats.current.projectedTotalTokens).toBeCloseTo(268.333, 3);
+    expect(data.stats.current.observedProjectedTotalTokens).toBe(175);
+    expect(data.stats.baselineTotalTokensMean).toBe(90);
+    expect(data.stats.baselineTotalTokensMedian).toBe(70);
+    expect(data.stats.currentVsPreviousTokens).toBe(80);
+    expect(data.stats.currentObservedVsPreviousTokens).toBe(0);
+    expect(data.stats.currentVsBaselineMeanTokens).toBe(140);
+    expect(data.stats.currentObservedVsBaselineMeanTokens).toBe(60);
+    expect(data.stats.currentVsBaselineMedianTokens).toBe(160);
+    expect(data.stats.currentObservedVsBaselineMedianTokens).toBe(80);
+    expect(data.stats.dayStats).toHaveLength(7);
+    expect(data.stats.dayStats[0]?.meanTokens).toBe(52.5);
+    expect(data.cycles[0]?.distributionDays[6]?.available).toBe(false);
+    expect(data.cycles[0]?.distributionDays[6]?.totalTokens).toBeNull();
+    expect(currentCurvePoints[currentCurvePoints.length - 1]?.[1]).toBeCloseTo(100, 5);
+    expect(previousCurvePoints[previousCurvePoints.length - 1]?.[1]).toBeCloseTo(100, 5);
   });
 
   test("rolls cycle end forward when reset date is in the past", () => {

@@ -27,7 +27,6 @@ type ContributionHeatmapProps = {
   variant?: HeatmapVariant;
   cycleLayout?: HeatmapCycleLayout;
   settings: HeatmapCycleSettings;
-  onSettingsChange: (next: HeatmapCycleSettings) => void;
   onContentHeightChange?: (heightPx: number) => void;
 };
 
@@ -36,7 +35,6 @@ export default function ContributionHeatmap({
   variant = "full",
   cycleLayout = "auto",
   settings,
-  onSettingsChange,
   onContentHeightChange,
 }: ContributionHeatmapProps) {
   const { locale, t } = useLocale();
@@ -103,39 +101,6 @@ export default function ContributionHeatmap({
         : `heatmap-panel ${variant}`}
       aria-label={t("heatmap.aria")}
     >
-      <div className="heatmap-cycle-toolbar">
-        <label>
-          <span>{t("heatmap.cycle.resetDate")}</span>
-          <input
-            type="date"
-            value={normalizedSettings.resetDate}
-            onChange={(event) =>
-              onSettingsChange(
-                normalizeHeatmapCycleSettings({
-                  ...normalizedSettings,
-                  resetDate: event.target.value,
-                }),
-              )}
-          />
-        </label>
-        <label>
-          <span>{t("heatmap.cycle.days")}</span>
-          <input
-            type="number"
-            min={3}
-            max={60}
-            value={normalizedSettings.cycleDays}
-            onChange={(event) =>
-              onSettingsChange(
-                normalizeHeatmapCycleSettings({
-                  ...normalizedSettings,
-                  cycleDays: Number(event.target.value),
-                }),
-              )}
-          />
-        </label>
-      </div>
-
       <div className="heatmap-head">
         <div className="heatmap-legend">
           <span>{t("heatmap.legend.low")}</span>

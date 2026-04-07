@@ -1,4 +1,4 @@
-import { render } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, test } from "vitest";
 import ContributionHeatmap from "./ContributionHeatmap";
 import { LocaleProvider } from "../lib/i18n";
@@ -29,7 +29,6 @@ describe("ContributionHeatmap", () => {
         <ContributionHeatmap
           cells={[]}
           settings={{ resetDate: "2026-03-31", cycleDays: 7 }}
-          onSettingsChange={() => {}}
         />
       </LocaleProvider>,
     );
@@ -37,6 +36,8 @@ describe("ContributionHeatmap", () => {
     const panel = container.querySelector(".heatmap-panel");
     expect(panel).not.toBeNull();
     expect(panel?.classList.contains("single-column")).toBe(false);
+    expect(screen.queryByLabelText("Next reset date")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Cycle days")).not.toBeInTheDocument();
   });
 
   test("supports explicit single-column mode", () => {
@@ -46,7 +47,6 @@ describe("ContributionHeatmap", () => {
           cells={[]}
           cycleLayout="single-column"
           settings={{ resetDate: "2026-03-31", cycleDays: 7 }}
-          onSettingsChange={() => {}}
         />
       </LocaleProvider>,
     );
@@ -64,7 +64,6 @@ describe("ContributionHeatmap", () => {
         <ContributionHeatmap
           cells={[]}
           settings={{ resetDate: "2026-03-31", cycleDays: 7 }}
-          onSettingsChange={() => {}}
         />
       </LocaleProvider>,
     );

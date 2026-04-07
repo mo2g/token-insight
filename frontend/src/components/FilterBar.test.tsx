@@ -1,8 +1,9 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, test } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import FilterBar from "./FilterBar";
 import { LocaleProvider } from "../lib/i18n";
 import type { UsageFilter } from "../lib/api";
+import type { HeatmapCycleSettings } from "../lib/heatmapCycles";
 
 const baseFilter: UsageFilter = {
   sources: [],
@@ -16,7 +17,16 @@ const baseFilter: UsageFilter = {
   excludeArchived: false,
 };
 
-function renderFilterBar(filter: UsageFilter = baseFilter) {
+const baseCycleSettings: HeatmapCycleSettings = {
+  resetDate: "2026-03-31",
+  cycleDays: 7,
+};
+
+function renderFilterBar(
+  filter: UsageFilter = baseFilter,
+  cycleSettings: HeatmapCycleSettings = baseCycleSettings,
+  onCycleSettingsChange: (next: HeatmapCycleSettings) => void = () => undefined,
+) {
   return render(
     <LocaleProvider>
       <FilterBar
@@ -25,6 +35,7 @@ function renderFilterBar(filter: UsageFilter = baseFilter) {
           { value: "gpt-5", label: "gpt-5", tokens: 1200 },
           { value: "o3-mini", label: "o3-mini", tokens: 800 },
         ]}
+        cycleSettings={cycleSettings}
         pinned={false}
         showInlineTools={false}
         activeFilterCount={0}
@@ -33,6 +44,7 @@ function renderFilterBar(filter: UsageFilter = baseFilter) {
         onRefresh={() => undefined}
         onOpenAdvanced={() => undefined}
         onChange={() => undefined}
+        onCycleSettingsChange={onCycleSettingsChange}
         onClear={() => undefined}
         onResetLayout={() => undefined}
         layoutCustomized={false}
@@ -85,5 +97,30 @@ describe("FilterBar", () => {
     fireEvent.click(screen.getByRole("button", { name: "gpt-5" }));
     expect(document.body.querySelector(".model-spend-overlay")).toBeTruthy();
     expect(screen.getByText("o3-mini")).toBeInTheDocument();
+  });
+
+  test("renders cycle settings controls and forwards updates", () => {
+    const onCycleSettingsChange = vi.fn();
+    renderFilterBar(baseFilter, baseCycleSettings, onCycleSettingsChange);
+
+    expect(screen.getByRole("group", { name: "Cycle settings" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Next reset date")).toHaveValue("2026-03-31");
+    expect(screen.getByLabelText("Cycle days")).toHaveValue(7);
+
+    fireEvent.change(screen.getByLabelText("Next reset date"), {
+      target: { value: "2026-04-07" },
+    });
+    expect(onCycleSettingsChange).toHaveBeenCalledWith({
+      resetDate: "2026-04-07",
+      cycleDays: 7,
+    });
+
+    fireEvent.change(screen.getByLabelText("Cycle days"), {
+      target: { value: "14" },
+    });
+    expect(onCycleSettingsChange).toHaveBeenCalledWith({
+      resetDate: "2026-03-31",
+      cycleDays: 14,
+    });
   });
 });

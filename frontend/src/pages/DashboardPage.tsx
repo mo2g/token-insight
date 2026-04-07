@@ -7,6 +7,7 @@ import ContributionHeatmap from "../components/ContributionHeatmap";
 import CoreMetricsPanel from "../components/CoreMetricsPanel";
 import FilterBar from "../components/FilterBar";
 import FilterDrawer from "../components/FilterDrawer";
+import CycleComparisonPanel from "../components/CycleComparisonPanel";
 import Panel from "../components/Panel";
 import SourceHealthPanel from "../components/SourceHealthPanel";
 import {
@@ -610,7 +611,6 @@ export default function DashboardPage({
             <ContributionHeatmap
               cells={contributionQuery.data ?? []}
               settings={cycleSettings}
-              onSettingsChange={onCycleSettingsChange}
               variant={layoutTheme === "dock" ? "micro" : "compact"}
               onContentHeightChange={(heightPx) =>
                 setHeatmapContentHeight((previous) => (previous === heightPx ? previous : heightPx))
@@ -646,6 +646,18 @@ export default function DashboardPage({
         return (
           <Panel title={t("panel.rankSources.title")} subtitle={t("panel.rankSources.subtitle")}>
             <BreakdownTable rows={sourceRows.slice(0, 10)} variant="auto" />
+          </Panel>
+        );
+      case "compare":
+        return (
+          <Panel
+            title={t("panel.cycleCompare.title")}
+            subtitle={t("panel.cycleCompare.subtitle")}
+          >
+            <CycleComparisonPanel
+              cells={contributionQuery.data ?? []}
+              settings={cycleSettings}
+            />
           </Panel>
         );
       case "sources":
@@ -686,12 +698,14 @@ export default function DashboardPage({
           <FilterBar
             filter={filter}
             tokenModelOptions={tokenModelOptions}
+            cycleSettings={cycleSettings}
             pinned={filterPinned}
             showInlineTools={inlineDockTools}
             activeFilterCount={activeFilterCount}
             onTogglePinned={onToggleFilterPinned}
             onScrollTop={onScrollTop}
             onChange={onFilterChange}
+            onCycleSettingsChange={onCycleSettingsChange}
             onClear={onFilterClear}
             onOpenAdvanced={() => setDrawerOpen(true)}
             onRefresh={() => void refreshData()}

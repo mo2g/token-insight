@@ -17,8 +17,9 @@ describe("dashboardLayout", () => {
     expect(layout.find((item) => item.i === "trend")?.y).toBe(14);
     expect(layout.find((item) => item.i === "sources")).toMatchObject({ x: 0, y: 25 });
     expect(layout.find((item) => item.i === "rankSources")).toMatchObject({ x: 5, y: 25 });
-    expect(layout.find((item) => item.i === "heatmap")).toMatchObject({ x: 0, y: 35, w: 5, h: 11 });
-    expect(layout.find((item) => item.i === "health")).toMatchObject({ x: 5, y: 35, w: 7, h: 10 });
+    expect(layout.find((item) => item.i === "compare")).toMatchObject({ x: 0, y: 35, w: 12, h: 14 });
+    expect(layout.find((item) => item.i === "heatmap")).toMatchObject({ x: 0, y: 49, w: 5, h: 11 });
+    expect(layout.find((item) => item.i === "health")).toMatchObject({ x: 5, y: 49, w: 7, h: 10 });
   });
 
   test("normalizes card bounds and restores missing cards", () => {

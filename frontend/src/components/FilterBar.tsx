@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { formatNumber } from "../lib/format";
 import { useLocale } from "../lib/i18n";
 import { type UsageFilter } from "../lib/api";
+import { type HeatmapCycleSettings } from "../lib/heatmapCycles";
 
 type TokenModelOption = {
   value: string;
@@ -13,6 +14,7 @@ type TokenModelOption = {
 type FilterBarProps = {
   filter: UsageFilter;
   tokenModelOptions: TokenModelOption[];
+  cycleSettings: HeatmapCycleSettings;
   pinned: boolean;
   showInlineTools: boolean;
   activeFilterCount: number;
@@ -21,6 +23,7 @@ type FilterBarProps = {
   onRefresh: () => void;
   onOpenAdvanced: () => void;
   onChange: (next: UsageFilter) => void;
+  onCycleSettingsChange: (next: HeatmapCycleSettings) => void;
   onClear: () => void;
   onResetLayout: () => void;
   layoutCustomized: boolean;
@@ -35,6 +38,7 @@ type OverlayPosition = {
 export default function FilterBar({
   filter,
   tokenModelOptions,
+  cycleSettings,
   pinned,
   showInlineTools,
   activeFilterCount,
@@ -43,6 +47,7 @@ export default function FilterBar({
   onRefresh,
   onOpenAdvanced,
   onChange,
+  onCycleSettingsChange,
   onClear,
   onResetLayout,
   layoutCustomized,
@@ -225,6 +230,14 @@ export default function FilterBar({
     onChange({ ...filter, search: searchDraft.trim() || undefined });
   };
 
+  const updateResetDate = (resetDate: string) => {
+    onCycleSettingsChange({ ...cycleSettings, resetDate });
+  };
+
+  const updateCycleDays = (cycleDays: number) => {
+    onCycleSettingsChange({ ...cycleSettings, cycleDays });
+  };
+
   const toggleModel = (model: string) => {
     const nextModels = selectedModelSet.has(model)
       ? filter.models.filter((item) => item !== model)
@@ -282,6 +295,31 @@ export default function FilterBar({
           >
             {t("filter.excludeArchived")}
           </button>
+        </div>
+
+        <div
+          className="filter-row filter-cycle-toolbar"
+          role="group"
+          aria-label={t("filter.aria.cycleSettings")}
+        >
+          <label>
+            <span>{t("heatmap.cycle.resetDate")}</span>
+            <input
+              type="date"
+              value={cycleSettings.resetDate}
+              onChange={(event) => updateResetDate(event.target.value)}
+            />
+          </label>
+          <label>
+            <span>{t("heatmap.cycle.days")}</span>
+            <input
+              type="number"
+              min={3}
+              max={60}
+              value={cycleSettings.cycleDays}
+              onChange={(event) => updateCycleDays(Number(event.target.value))}
+            />
+          </label>
         </div>
 
         {chips.length > 0 ? (

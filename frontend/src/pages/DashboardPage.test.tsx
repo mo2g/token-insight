@@ -36,8 +36,10 @@ vi.mock("../components/ContributionHeatmap", async () => {
 
   return {
     default: ({
+      settings,
       onContentHeightChange,
     }: {
+      settings: { resetDate: string; cycleDays: number };
       onContentHeightChange?: (heightPx: number) => void;
     }) => {
       const [singleColumn, setSingleColumn] = React.useState(false);
@@ -47,20 +49,55 @@ vi.mock("../components/ContributionHeatmap", async () => {
       }, [singleColumn, onContentHeightChange]);
 
       return (
-        <button type="button" onClick={() => setSingleColumn((value) => !value)}>
-          {singleColumn ? "collapse heatmap" : "single column heatmap"}
-        </button>
+        <div>
+          <div data-testid="heatmap-settings">
+            {settings.resetDate}|{settings.cycleDays}
+          </div>
+          <button type="button" onClick={() => setSingleColumn((value) => !value)}>
+            {singleColumn ? "collapse heatmap" : "single column heatmap"}
+          </button>
+        </div>
       );
     },
   };
 });
+
+vi.mock("../components/CycleComparisonPanel", () => ({
+  default: ({
+    settings,
+  }: {
+    settings: { resetDate: string; cycleDays: number };
+  }) => (
+    <div data-testid="cycle-comparison-settings">
+      {settings.resetDate}|{settings.cycleDays}
+    </div>
+  ),
+}));
 
 vi.mock("../components/CoreMetricsPanel", () => ({
   default: () => <div data-testid="core-metrics">metrics</div>,
 }));
 
 vi.mock("../components/FilterBar", () => ({
-  default: () => <div data-testid="filter-bar">filter</div>,
+  default: ({
+    cycleSettings,
+    onCycleSettingsChange,
+  }: {
+    cycleSettings: { resetDate: string; cycleDays: number };
+    onCycleSettingsChange: (next: { resetDate: string; cycleDays: number }) => void;
+  }) => (
+    <div data-testid="filter-bar">
+      <div data-testid="filter-cycle-settings">
+        {cycleSettings.resetDate}|{cycleSettings.cycleDays}
+      </div>
+      <button
+        type="button"
+        onClick={() => onCycleSettingsChange({ resetDate: "2026-04-01", cycleDays: 14 })}
+      >
+        set-cycle-settings
+      </button>
+    </div>
+  ),
 }));
 
 vi.mock("../components/FilterDrawer", () => ({
@@ -252,6 +289,14 @@ describe("DashboardPage", () => {
       const health = latestGridLayout.find((item) => item.i === "health");
       expect(heatmap?.h).toBe(12);
       expect(health?.h).toBe(10);
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "set-cycle-settings" }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("filter-cycle-settings")).toHaveTextContent("2026-04-01|14");
+      expect(screen.getByTestId("heatmap-settings")).toHaveTextContent("2026-04-01|14");
+      expect(screen.getByTestId("cycle-comparison-settings")).toHaveTextContent("2026-04-01|14");
     });
 
     fireEvent.click(screen.getByRole("button", { name: "single column heatmap" }));
