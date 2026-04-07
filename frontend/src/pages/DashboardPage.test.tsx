@@ -238,6 +238,15 @@ describe("DashboardPage", () => {
       </MemoryRouter>,
     );
 
+    expect(screen.getByRole("link", { name: "trend.exportJson" })).toHaveAttribute(
+      "download",
+      "token-insight-events.json",
+    );
+    expect(screen.getByRole("link", { name: "trend.exportCsv" })).toHaveAttribute(
+      "download",
+      "token-insight-events.csv",
+    );
+
     await waitFor(() => {
       const heatmap = latestGridLayout.find((item) => item.i === "heatmap");
       const health = latestGridLayout.find((item) => item.i === "health");

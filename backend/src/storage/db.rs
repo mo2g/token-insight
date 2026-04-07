@@ -8,7 +8,7 @@ use chrono::{DateTime, Datelike, NaiveDate, TimeZone, Timelike, Utc};
 use chrono_tz::Tz;
 use csv::WriterBuilder;
 use directories::ProjectDirs;
-use serde_json::json;
+use serde::Serialize;
 use sqlx::{
     Row, SqlitePool,
     sqlite::{SqliteConnectOptions, SqlitePoolOptions},
@@ -33,6 +33,31 @@ struct ScanRow {
     last_scan_completed_at: Option<DateTime<Utc>>,
     last_duration_ms: Option<i64>,
     last_error: Option<String>,
+}
+
+#[derive(Serialize)]
+struct EventCsvRow<'a> {
+    event_id: &'a str,
+    source: &'a str,
+    source_path: &'a str,
+    session_id: Option<&'a str>,
+    timestamp: &'a DateTime<Utc>,
+    project: Option<&'a str>,
+    cwd: Option<&'a str>,
+    provider: Option<&'a str>,
+    model: Option<&'a str>,
+    model_family: Option<&'a str>,
+    prompt_tokens: i64,
+    completion_tokens: i64,
+    cache_read_tokens: i64,
+    cache_write_tokens: i64,
+    reasoning_tokens: i64,
+    tool_tokens: i64,
+    total_tokens: i64,
+    estimated_cost_usd: Option<f64>,
+    mode: &'a str,
+    message_role: Option<&'a str>,
+    raw_kind: Option<&'a str>,
 }
 
 impl Database {
@@ -530,29 +555,29 @@ impl Database {
         match dataset {
             ExportDataset::Events => {
                 for event in self.query_events(filter).await? {
-                    writer.serialize(json!({
-                        "event_id": event.event_id,
-                        "source": event.source.as_str(),
-                        "source_path": event.source_path,
-                        "session_id": event.session_id,
-                        "timestamp": event.timestamp.to_rfc3339(),
-                        "project": event.project,
-                        "cwd": event.cwd,
-                        "provider": event.provider,
-                        "model": event.model,
-                        "model_family": event.model_family,
-                        "prompt_tokens": event.prompt_tokens,
-                        "completion_tokens": event.completion_tokens,
-                        "cache_read_tokens": event.cache_read_tokens,
-                        "cache_write_tokens": event.cache_write_tokens,
-                        "reasoning_tokens": event.reasoning_tokens,
-                        "tool_tokens": event.tool_tokens,
-                        "total_tokens": event.total_tokens,
-                        "estimated_cost_usd": event.estimated_cost_usd,
-                        "mode": event.mode.as_str(),
-                        "message_role": event.message_role,
-                        "raw_kind": event.raw_kind,
-                    }))?;
+                    writer.serialize(EventCsvRow {
+                        event_id: &event.event_id,
+                        source: event.source.as_str(),
+                        source_path: &event.source_path,
+                        session_id: event.session_id.as_deref(),
+                        timestamp: &event.timestamp,
+                        project: event.project.as_deref(),
+                        cwd: event.cwd.as_deref(),
+                        provider: event.provider.as_deref(),
+                        model: event.model.as_deref(),
+                        model_family: event.model_family.as_deref(),
+                        prompt_tokens: event.prompt_tokens,
+                        completion_tokens: event.completion_tokens,
+                        cache_read_tokens: event.cache_read_tokens,
+                        cache_write_tokens: event.cache_write_tokens,
+                        reasoning_tokens: event.reasoning_tokens,
+                        tool_tokens: event.tool_tokens,
+                        total_tokens: event.total_tokens,
+                        estimated_cost_usd: event.estimated_cost_usd,
+                        mode: event.mode.as_str(),
+                        message_role: event.message_role.as_deref(),
+                        raw_kind: event.raw_kind.as_deref(),
+                    })?;
                 }
             }
             ExportDataset::Daily => {

@@ -497,8 +497,11 @@ export default function DashboardPage({
     setCardLayout(defaultDashboardLayout(layoutTheme));
   };
 
-  const exportBase = `/api/export/events.json?${filterToQuery(filter).toString()}`;
-  const exportCsv = `/api/export/events.csv?${filterToQuery(filter).toString()}`;
+  const exportQuery = filterToQuery(filter).toString();
+  const exportBase = `/api/export/events.json?${exportQuery}`;
+  const exportCsv = `/api/export/events.csv?${exportQuery}`;
+  const exportJsonName = "token-insight-events.json";
+  const exportCsvName = "token-insight-events.csv";
 
   const renderCard = (cardId: DashboardCardId) => {
     switch (cardId) {
@@ -566,10 +569,10 @@ export default function DashboardPage({
                     {t("trend.metric.dualShort")}
                   </button>
                 </div>
-                <a className="button ghost panel-ghost" href={exportBase}>
+                <a className="button ghost panel-ghost" href={exportBase} download={exportJsonName}>
                   {t("trend.exportJson")}
                 </a>
-                <a className="button ghost panel-ghost" href={exportCsv}>
+                <a className="button ghost panel-ghost" href={exportCsv} download={exportCsvName}>
                   {t("trend.exportCsv")}
                 </a>
               </div>

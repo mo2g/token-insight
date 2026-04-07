@@ -55,7 +55,7 @@ pub fn router(state: AppState, static_dir: Option<PathBuf>) -> Router {
         .route("/api/health", get(health))
         .route("/api/sources", get(list_sources))
         .route("/api/refresh", post(refresh))
-        .route("/api/export/events.:format", get(export))
+        .route("/api/export/events.{format}", get(export))
         .route("/api/overview", get(overview))
         .route("/api/breakdowns/models", get(models_breakdown))
         .route("/api/breakdowns/sources", get(sources_breakdown))
@@ -199,11 +199,21 @@ async fn export(
     } else {
         "application/json; charset=utf-8"
     };
+    let filename = export_filename(dataset, is_csv);
     Ok(Response::builder()
         .status(StatusCode::OK)
         .header(header::CONTENT_TYPE, HeaderValue::from_static(content_type))
+        .header(
+            header::CONTENT_DISPOSITION,
+            HeaderValue::from_str(&format!("attachment; filename={filename}"))?,
+        )
         .body(Body::from(bytes))
         .expect("response"))
+}
+
+fn export_filename(dataset: ExportDataset, is_csv: bool) -> String {
+    let extension = if is_csv { "csv" } else { "json" };
+    format!("token-insight-{dataset}.{extension}")
 }
 
 async fn render_social_image(
