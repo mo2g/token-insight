@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import CycleComparisonPanel from "./CycleComparisonPanel";
 
 let lastOption: unknown = null;
@@ -41,6 +41,12 @@ vi.mock("../lib/theme", () => ({
 describe("CycleComparisonPanel", () => {
   beforeEach(() => {
     lastOption = null;
+    // Mock date to match test data (2026-04-08 aligns with resetDate in settings)
+    vi.setSystemTime(new Date("2026-04-08T12:00:00Z"));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   test("switches between token and cost metrics across totals and rhythm views", async () => {

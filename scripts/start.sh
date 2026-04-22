@@ -13,4 +13,12 @@ if lsof -nP -iTCP:"$PORT" -sTCP:LISTEN >/dev/null 2>&1; then
 fi
 
 bun --cwd "$FRONTEND_DIR" build
-cargo run --manifest-path "$BACKEND_DIR/Cargo.toml" -- serve --port "$PORT" --static-dir "$FRONTEND_DIR/dist"
+
+# Forward Ctrl+C (SIGINT) and SIGTERM to child process
+trap 'kill -TERM $BACKEND_PID 2>/dev/null; wait $BACKEND_PID 2>/dev/null; exit 0' INT TERM
+
+cargo run --manifest-path "$BACKEND_DIR/Cargo.toml" -- serve --port "$PORT" --static-dir "$FRONTEND_DIR/dist" &
+BACKEND_PID=$!
+
+# Wait for backend process
+wait $BACKEND_PID

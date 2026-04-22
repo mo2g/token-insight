@@ -244,7 +244,16 @@ async fn main() -> Result<()> {
             Arc::clone(&state.ingest).watch_forever().await?;
         }
         Command::Serve(args) => {
-            state.ingest.refresh_all().await?;
+            // Spawn initial refresh in background to avoid blocking startup
+            let ingest_for_refresh = Arc::clone(&state.ingest);
+            tokio::spawn(async move {
+                if let Err(error) = ingest_for_refresh.refresh_all().await {
+                    tracing::error!(%error, "initial refresh failed");
+                } else {
+                    tracing::info!("initial refresh completed");
+                }
+            });
+
             let ingest = Arc::clone(&state.ingest);
             tokio::spawn(async move {
                 if let Err(error) = ingest.watch_forever().await {

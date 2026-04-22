@@ -14,8 +14,8 @@ export type HeatmapCycleSettings = {
 
 export type HeatmapCycleDay = {
   day: string;
-  totalTokens: number;
-  totalCostUsd: number;
+  totalTokens: number | null;
+  totalCostUsd: number | null;
   active: boolean;
   level: number;
 };
@@ -314,14 +314,14 @@ export function buildHeatmapCycles(
       const current = addDays(startDate, offset);
       const day = formatDay(current);
       const source = byDay.get(day);
-      const totalTokensForDay = source?.total_tokens ?? 0;
-      const totalCostUsdForDay = source?.total_cost_usd ?? 0;
-      const active = totalTokensForDay > 0;
+      const totalTokensForDay = source?.total_tokens ?? null;
+      const totalCostUsdForDay = source?.total_cost_usd ?? null;
+      const active = (totalTokensForDay ?? 0) > 0;
       if (active) {
         activeDays += 1;
       }
-      totalTokens += totalTokensForDay;
-      totalCostUsd += totalCostUsdForDay;
+      totalTokens += totalTokensForDay ?? 0;
+      totalCostUsd += totalCostUsdForDay ?? 0;
       days.push({
         day,
         totalTokens: totalTokensForDay,
@@ -344,14 +344,14 @@ export function buildHeatmapCycles(
 
   const maxTokens = Math.max(
     0,
-    ...rawCycles.flatMap((cycle) => cycle.days.map((day) => day.totalTokens)),
+    ...rawCycles.flatMap((cycle) => cycle.days.map((day) => day.totalTokens ?? 0)),
   );
 
   const cycles: HeatmapCycle[] = rawCycles.map((cycle) => ({
     ...cycle,
     days: cycle.days.map((day) => ({
       ...day,
-      level: levelForTokens(day.totalTokens, maxTokens),
+      level: levelForTokens(day.totalTokens ?? 0, maxTokens),
     })),
   }));
 
@@ -680,12 +680,14 @@ function countElapsedDays(days: HeatmapCycle["days"], today: string) {
 function findPeakDay(days: HeatmapCycle["days"]) {
   let peak = days[0];
   for (const day of days) {
-    if (!peak || day.totalTokens > peak.totalTokens) {
+    const dayTokens = day.totalTokens ?? 0;
+    const peakTokens = peak?.totalTokens ?? 0;
+    if (!peak || dayTokens > peakTokens) {
       peak = day;
     }
   }
 
-  if (!peak || peak.totalTokens <= 0) {
+  if (!peak || (peak.totalTokens ?? 0) <= 0) {
     return null;
   }
 

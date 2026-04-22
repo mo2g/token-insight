@@ -517,8 +517,8 @@ function buildMetricCurvePoints(
   return points;
 }
 
-function getMetricDayValue(day: { totalTokens: number | null; totalCostUsd: number | null }, metric: CycleComparisonMetric) {
-  return metric === "tokens" ? (day.totalTokens ?? 0) : (day.totalCostUsd ?? 0);
+function getMetricDayValue(day: { totalTokens: number | null; totalCostUsd: number | null }, metric: CycleComparisonMetric): number | null {
+  return metric === "tokens" ? day.totalTokens : day.totalCostUsd;
 }
 
 function buildTotalsChartOption(
@@ -653,7 +653,7 @@ function buildDistributionChartOption(
       barWidth: 14,
       barGap: "14%",
       barCategoryGap: "32%",
-      data: cycle.distributionDays.map((day) => day.available ? day.value : null),
+      data: cycle.distributionDays.map((day) => (day.available && day.value !== null) ? day.value : null),
       itemStyle: {
         color: cycleColor(cycle, palette),
         borderRadius: [6, 6, 0, 0],

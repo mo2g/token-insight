@@ -187,8 +187,8 @@ export default function ContributionHeatmap({
               {cycle.days.map((day, dayIndex) => {
                 const title = t("heatmap.cellTitle", {
                   day: formatCalendarDay(day.day, locale),
-                  tokens: formatNumber(day.totalTokens),
-                  cost: formatUsd(day.totalCostUsd, locale),
+                  tokens: formatNumber(day.totalTokens ?? 0),
+                  cost: formatUsd(day.totalCostUsd ?? 0, locale),
                 });
                 return (
                   <button
