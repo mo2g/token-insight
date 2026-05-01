@@ -76,6 +76,8 @@ export default function FilterBar({
   useEffect(() => {
     if (!modelOpen) return;
 
+    let rafId: number | null = null;
+
     const updateOverlay = () => {
       const trigger = modelButtonRef.current;
       if (!trigger) return;
@@ -88,6 +90,13 @@ export default function FilterBar({
         top: rect.bottom + 8,
         width,
       });
+    };
+
+    const debouncedUpdate = () => {
+      if (rafId) {
+        cancelAnimationFrame(rafId);
+      }
+      rafId = requestAnimationFrame(updateOverlay);
     };
 
     const onPointerDown = (event: PointerEvent) => {
@@ -108,21 +117,24 @@ export default function FilterBar({
     const resizeObserver =
       typeof ResizeObserver === "undefined" || !modelButtonRef.current
         ? null
-        : new ResizeObserver(() => updateOverlay());
+        : new ResizeObserver(() => debouncedUpdate());
     if (resizeObserver && modelButtonRef.current) {
       resizeObserver.observe(modelButtonRef.current);
     }
     window.addEventListener("pointerdown", onPointerDown);
     window.addEventListener("keydown", onKeyDown);
-    window.addEventListener("resize", updateOverlay);
-    window.addEventListener("scroll", updateOverlay, true);
+    window.addEventListener("resize", debouncedUpdate);
+    window.addEventListener("scroll", debouncedUpdate, true);
 
     return () => {
       resizeObserver?.disconnect();
       window.removeEventListener("pointerdown", onPointerDown);
       window.removeEventListener("keydown", onKeyDown);
-      window.removeEventListener("resize", updateOverlay);
-      window.removeEventListener("scroll", updateOverlay, true);
+      window.removeEventListener("resize", debouncedUpdate);
+      window.removeEventListener("scroll", debouncedUpdate, true);
+      if (rafId) {
+        cancelAnimationFrame(rafId);
+      }
     };
   }, [modelOpen]);
 

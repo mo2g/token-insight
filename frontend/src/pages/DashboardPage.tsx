@@ -136,15 +136,27 @@ export default function DashboardPage({
       return;
     }
 
+    let rafId: number | null = null;
+
     setDashboardWidth(element.clientWidth || 1320);
     const observer = new ResizeObserver((entries) => {
-      const next = entries.at(0)?.contentRect.width;
-      if (next && next > 0) {
-        setDashboardWidth(next);
+      if (rafId) {
+        cancelAnimationFrame(rafId);
       }
+      rafId = requestAnimationFrame(() => {
+        const next = entries.at(0)?.contentRect.width;
+        if (next && next > 0) {
+          setDashboardWidth(next);
+        }
+      });
     });
     observer.observe(element);
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      if (rafId) {
+        cancelAnimationFrame(rafId);
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -152,39 +164,74 @@ export default function DashboardPage({
     if (!element || typeof ResizeObserver === "undefined") {
       return;
     }
+
+    let rafId: number | null = null;
+
     const observer = new ResizeObserver((entries) => {
-      const next = entries.at(0)?.contentRect.width;
-      if (next && next > 0) {
-        setChartWidth(next);
+      if (rafId) {
+        cancelAnimationFrame(rafId);
       }
+      rafId = requestAnimationFrame(() => {
+        const next = entries.at(0)?.contentRect.width;
+        if (next && next > 0) {
+          setChartWidth(next);
+        }
+      });
     });
     observer.observe(element);
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      if (rafId) {
+        cancelAnimationFrame(rafId);
+      }
+    };
   }, []);
 
   useEffect(() => {
     const element = filterShellRef.current;
     if (!element) return;
 
+    let rafId: number | null = null;
+    let lastBounds = { left: 0, width: 0, height: 0 };
+
     const update = () => {
       const rect = element.getBoundingClientRect();
-      setFilterBounds({
+      const newBounds = {
         left: rect.left,
         width: rect.width,
         height: element.offsetHeight,
-      });
+      };
+      // Only update if bounds actually changed
+      if (
+        newBounds.left !== lastBounds.left ||
+        newBounds.width !== lastBounds.width ||
+        newBounds.height !== lastBounds.height
+      ) {
+        lastBounds = newBounds;
+        setFilterBounds(newBounds);
+      }
+    };
+
+    const debouncedUpdate = () => {
+      if (rafId) {
+        cancelAnimationFrame(rafId);
+      }
+      rafId = requestAnimationFrame(update);
     };
 
     update();
     const resizeObserver =
       typeof ResizeObserver === "undefined"
         ? null
-        : new ResizeObserver(() => update());
+        : new ResizeObserver(() => debouncedUpdate());
     resizeObserver?.observe(element);
-    window.addEventListener("resize", update);
+    window.addEventListener("resize", debouncedUpdate);
     return () => {
       resizeObserver?.disconnect();
-      window.removeEventListener("resize", update);
+      window.removeEventListener("resize", debouncedUpdate);
+      if (rafId) {
+        cancelAnimationFrame(rafId);
+      }
     };
   }, []);
 
@@ -195,9 +242,22 @@ export default function DashboardPage({
       return;
     }
 
+    let rafId: number | null = null;
+    let lastHeight = 0;
+
     const update = () => {
       const next = Math.max(0, panel.offsetHeight - body.clientHeight);
-      setHeatmapPanelChromeHeight((previous) => (previous === next ? previous : next));
+      if (next !== lastHeight) {
+        lastHeight = next;
+        setHeatmapPanelChromeHeight(next);
+      }
+    };
+
+    const debouncedUpdate = () => {
+      if (rafId) {
+        cancelAnimationFrame(rafId);
+      }
+      rafId = requestAnimationFrame(update);
     };
 
     update();
@@ -205,10 +265,15 @@ export default function DashboardPage({
       return;
     }
 
-    const observer = new ResizeObserver(() => update());
+    const observer = new ResizeObserver(() => debouncedUpdate());
     observer.observe(panel);
     observer.observe(body);
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      if (rafId) {
+        cancelAnimationFrame(rafId);
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -218,9 +283,22 @@ export default function DashboardPage({
       return;
     }
 
+    let rafId: number | null = null;
+    let lastHeight = 0;
+
     const update = () => {
       const next = Math.max(0, panel.offsetHeight - body.clientHeight);
-      setHealthPanelChromeHeight((previous) => (previous === next ? previous : next));
+      if (next !== lastHeight) {
+        lastHeight = next;
+        setHealthPanelChromeHeight(next);
+      }
+    };
+
+    const debouncedUpdate = () => {
+      if (rafId) {
+        cancelAnimationFrame(rafId);
+      }
+      rafId = requestAnimationFrame(update);
     };
 
     update();
@@ -228,10 +306,15 @@ export default function DashboardPage({
       return;
     }
 
-    const observer = new ResizeObserver(() => update());
+    const observer = new ResizeObserver(() => debouncedUpdate());
     observer.observe(panel);
     observer.observe(body);
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      if (rafId) {
+        cancelAnimationFrame(rafId);
+      }
+    };
   }, []);
 
   const normalizedLayout = useMemo(

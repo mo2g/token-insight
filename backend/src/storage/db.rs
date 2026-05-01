@@ -157,6 +157,28 @@ impl Database {
         Ok(row.map(|row| row.get::<String, _>("fingerprint")))
     }
 
+    /// Get artifact metadata (size and modified time) for fast change detection
+    pub async fn artifact_metadata(
+        &self,
+        source: SourceKind,
+        path: &Path,
+    ) -> Result<Option<(i64, Option<DateTime<Utc>>)>> {
+        let row = sqlx::query(
+            "SELECT size_bytes, modified_at FROM artifacts WHERE source = ? AND path = ?",
+        )
+        .bind(source.as_str())
+        .bind(path.to_string_lossy().to_string())
+        .fetch_optional(&self.pool)
+        .await?;
+
+        Ok(row.map(|row| {
+            let size: i64 = row.get("size_bytes");
+            let modified: Option<String> = row.get("modified_at");
+            let modified_dt = modified.and_then(|s| DateTime::parse_from_rfc3339(&s).ok().map(|dt| dt.with_timezone(&Utc)));
+            (size, modified_dt)
+        }))
+    }
+
     pub async fn artifact_has_missing_model_events(
         &self,
         source: SourceKind,

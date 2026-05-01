@@ -163,6 +163,8 @@ pub fn default_source_definitions() -> Vec<SourceDefinition> {
     ]
 }
 
+const MAX_WALK_DEPTH: usize = 8;
+
 pub fn discover_artifacts(definition: &SourceDefinition) -> Vec<PathBuf> {
     let mut artifacts = Vec::new();
     for root in &definition.roots {
@@ -175,13 +177,33 @@ pub fn discover_artifacts(definition: &SourceDefinition) -> Vec<PathBuf> {
             }
             continue;
         }
-        for entry in WalkDir::new(root)
-            .follow_links(true)
-            .into_iter()
-            .filter_map(Result::ok)
-        {
+
+        let walker = WalkDir::new(root)
+            .follow_links(false)
+            .max_depth(MAX_WALK_DEPTH);
+
+        for entry in walker.into_iter().filter_map(Result::ok) {
             let path = entry.path();
-            if entry.file_type().is_file() && matches_source_file(definition.kind, path) {
+            let file_type = entry.file_type();
+
+            // Skip directories early to avoid unnecessary work
+            if !file_type.is_file() {
+                continue;
+            }
+
+            // Quick extension check before expensive filename matching
+            if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
+                let ext_lower = ext.to_ascii_lowercase();
+                let should_check = matches!(
+                    ext_lower.as_str(),
+                    "json" | "jsonl" | "csv" | "db" | "sqlite"
+                );
+                if !should_check {
+                    continue;
+                }
+            }
+
+            if matches_source_file(definition.kind, path) {
                 artifacts.push(path.to_path_buf());
             }
         }

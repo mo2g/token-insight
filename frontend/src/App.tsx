@@ -60,20 +60,35 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    const update = () => setDockState(resolveDockState(shellRef.current));
+    let rafId: number | null = null;
+
+    const update = () => {
+      setDockState(resolveDockState(shellRef.current));
+    };
+
+    const debouncedUpdate = () => {
+      if (rafId) {
+        cancelAnimationFrame(rafId);
+      }
+      rafId = requestAnimationFrame(update);
+    };
+
     update();
     const shell = shellRef.current;
     const observer =
       !shell || typeof ResizeObserver === "undefined"
         ? null
-        : new ResizeObserver(() => update());
+        : new ResizeObserver(() => debouncedUpdate());
     if (observer && shell) {
       observer.observe(shell);
     }
-    window.addEventListener("resize", update);
+    window.addEventListener("resize", debouncedUpdate);
     return () => {
       observer?.disconnect();
-      window.removeEventListener("resize", update);
+      window.removeEventListener("resize", debouncedUpdate);
+      if (rafId) {
+        cancelAnimationFrame(rafId);
+      }
     };
   }, []);
 

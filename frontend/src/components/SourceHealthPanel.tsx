@@ -54,8 +54,23 @@ export default function SourceHealthPanel({
       return;
     }
 
+    let rafId: number | null = null;
+    let lastHeight = 0;
+
     const emit = () => {
-      onContentHeightChange(Math.ceil(element.getBoundingClientRect().height));
+      const height = Math.ceil(element.getBoundingClientRect().height);
+      // Only emit if height actually changed
+      if (height !== lastHeight) {
+        lastHeight = height;
+        onContentHeightChange(height);
+      }
+    };
+
+    const debouncedEmit = () => {
+      if (rafId) {
+        cancelAnimationFrame(rafId);
+      }
+      rafId = requestAnimationFrame(emit);
     };
 
     emit();
@@ -63,9 +78,14 @@ export default function SourceHealthPanel({
       return;
     }
 
-    const observer = new ResizeObserver(() => emit());
+    const observer = new ResizeObserver(() => debouncedEmit());
     observer.observe(element);
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      if (rafId) {
+        cancelAnimationFrame(rafId);
+      }
+    };
   }, [collapsed, detailsOpen, onContentHeightChange, variant, viewMode]);
 
   if (items.length === 0) {
